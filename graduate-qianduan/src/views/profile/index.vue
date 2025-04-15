@@ -36,6 +36,30 @@
             </el-form>
           </div>
         </modern-card>
+
+        <modern-card title="城市设置" class="city-card">
+          <el-form label-width="120px">
+            <el-form-item label="当前城市">
+              <template v-if="!cityEditMode">
+                <modern-button :text="userInfo.currentCity || '未设置'" @click="startCityEdit" />
+              </template>
+              <template v-else>
+                <div class="city-edit">
+                  <modern-input v-model="cityForm.currentCity" placeholder="请输入城市名称" />
+                  <div class="city-actions">
+                    <modern-button type="primary" text="保存" @click="updateCity" />
+                    <modern-button text="取消" @click="cancelCityEdit" />
+                  </div>
+                </div>
+              </template>
+            </el-form-item>
+            
+              <div class="city-tip">
+                <i class="el-icon-info-filled"></i>
+                <span>设置当前城市可以帮助我们为您提供更加精准的天气预报服务</span>
+              </div>
+          </el-form>
+        </modern-card>
       </el-col>
 
       <el-col :span="16">
@@ -115,6 +139,7 @@
     setup() {
       const router = useRouter()
       const editMode = ref(false)
+      const cityEditMode = ref(false) 
       const passwordDialogVisible = ref(false)
       const passwordFormRef = ref(null)
       
@@ -123,7 +148,8 @@
         username: '',
         name: '',
         avatar: '',
-        entrydate: ''
+        entrydate: '',
+        currentCity: ''
       })
       
       // 用户表单
@@ -132,6 +158,12 @@
         name: '',
         entrydate: new Date()
       })
+      // 新增：城市表单
+      const cityForm = reactive({
+        currentCity: ''
+      })
+      // 新增：原始城市信息
+      const originalCityData = ref('')
       // 保存原始用户信息，用于取消编辑时恢复
       const originalUserData = ref({
         username: '',
@@ -185,7 +217,8 @@
             // 保存用户信息
             userInfo.value = {
               ...response.data.data,
-              avatar: response.data.data.image || '' // 使用image字段作为头像
+              avatar: response.data.data.image || '', // 使用image字段作为头像
+              currentCity: response.data.data.currentCity || '沈阳市' // 获取当前城市，默认为沈阳市
             }
 
             // 填充表单
@@ -193,11 +226,15 @@
             userForm.name = userInfo.value.name || ''
             userForm.entrydate = userInfo.value.entrydate ? new Date(userInfo.value.entrydate) : new Date()
 
+            // 填充城市表单
+            cityForm.currentCity = userInfo.value.currentCity || '沈阳市'
+
             // 保存原始数据，用于取消编辑
             originalUserData.value = {
               username: userForm.username,
               name: userForm.name
             }
+            originalCityData.value = cityForm.currentCity
           } else {
             ElMessage.error('获取用户信息失败: ' + (response?.data.msg || '无用户信息'))
           }
@@ -214,6 +251,48 @@
           userForm.name = originalUserData.value.name
         }
         editMode.value = !editMode.value
+      }
+      // 新增：开始编辑城市
+      const startCityEdit = () => {
+        cityEditMode.value = true
+        cityForm.currentCity = userInfo.value.currentCity || ''
+        originalCityData.value = cityForm.currentCity
+      }
+      // 新增：取消编辑城市
+      const cancelCityEdit = () => {
+        cityEditMode.value = false
+        cityForm.currentCity = originalCityData.value
+      }
+      // 新增：更新城市
+      const updateCity = async () => {
+        try {
+          if (!cityForm.currentCity) {
+            ElMessage.warning('城市名称不能为空')
+            return
+          }
+
+          await updateUser({
+            currentCity: cityForm.currentCity
+          })
+
+          ElMessage.success('城市设置更新成功')
+          cityEditMode.value = false
+
+          // 更新显示的用户城市信息
+          userInfo.value.currentCity = cityForm.currentCity
+
+          // 更新原始城市数据
+          originalCityData.value = cityForm.currentCity
+
+          // 添加一条活动记录
+          activities.value.unshift({
+            content: '更新了城市设置',
+            time: new Date().toLocaleString('zh-CN'),
+            type: 'info'
+          })
+        } catch (error) {
+          ElMessage.error('更新城市失败: ' + (error.message || '未知错误'))
+        }
       }
 
       // 更新用户信息
@@ -315,7 +394,12 @@
         showPasswordDialog,
         changePassword,
         logout,
-        toggleEditMode
+        toggleEditMode,
+        startCityEdit, 
+        cancelCityEdit, 
+        updateCity,
+        cityEditMode,
+        cityForm
       }
     }
   }
@@ -378,4 +462,56 @@
   :deep(.el-timeline-item__node--info) {
     background-color: #24C6DC;
   }
+  /* 新增城市卡片样式 */
+.city-card {
+  margin-top: 20px;
+}
+
+.city-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 15px;
+}
+
+.current-city-display {
+  flex: 1;
+}
+
+.city-label {
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 8px;
+}
+
+.city-value {
+  font-size: 16px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.city-edit {
+  margin-top: 10px;
+}
+
+.city-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.city-tip {
+  display: flex;
+  align-items: center;
+  background-color: rgba(66, 133, 244, 0.1);
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #4285F4;
+  margin-left: 0; /* 确保左侧不对齐 */
+  i {
+    margin-right: 5px;
+    font-size: 14px;
+  }
+}
   </style>

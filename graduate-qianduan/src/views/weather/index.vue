@@ -136,6 +136,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getWeather } from '@/api/weather' 
+import { getUserInfo } from '@/api/user' 
 import ModernPageContainer from '@/components/layout/ModernPageContainer.vue'
 import ModernCard from '@/components/layout/ModernCard.vue'
 import ModernButton from '@/components/ui/ModernButton.vue'
@@ -473,10 +474,32 @@ export default {
         loading.value = false
       }
     }
+    // 初始化用户城市
+    const initUserCity = async () => {
+      try {
+        const response = await getUserInfo()
+
+        if (response && response.data.code === 1 && response.data) {
+          searchQuery.value = response.data.data.currentCity
+          cityName.value = response.data.data.currentCity
+        } else {
+          // 如果没有获取到用户城市，使用默认城市
+          searchQuery.value = '沈阳市'
+          cityName.value = '沈阳市'
+        }
+        // 获取天气数据
+        searchWeather()
+      } catch (error) {
+        console.error('获取用户信息失败', error)
+        // 出错时使用默认城市
+        searchQuery.value = '沈阳市'
+        cityName.value = '沈阳市'
+        searchWeather()
+      }
+    }
     
     onMounted(() => {
-      // 页面加载时获取默认城市的天气
-      searchWeather()
+      initUserCity()
     })
     
     return {
