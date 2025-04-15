@@ -1,0 +1,37 @@
+// 颜色变量
+$primary-color: #4285F4;
+$success-color: #34A853;
+$warning-color: #FBBC05;
+$danger-color: #EA4335;
+$info-color: #24C6DC;
+
+$text-primary: #333333;
+$text-secondary: #666666;
+$text-disabled: #999999;
+
+$bg-light: #f5f6fa;
+$bg-white: #ffffff;
+$border-color: #e0e0e0;
+
+// 阴影
+$shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.05);
+$shadow-md: 0 8px 32px rgba(31, 38, 135, 0.1);
+$shadow-lg: 0 12px 42px rgba(31, 38, 135, 0.15);
+$shadow-primary: 0 4px 10px rgba(66, 133, 244, 0.3);
+
+// 圆角
+$border-radius-sm: 8px;
+$border-radius-md: 12px;
+$border-radius-lg: 16px;
+
+// 过渡
+$transition-fast: all 0.2s ease;
+$transition-normal: all 0.3s ease;
+$transition-slow: all 0.5s ease;
+
+// 间距
+$spacing-xs: 5px;
+$spacing-sm: 10px;
+$spacing-md: 15px;
+$spacing-lg: 20px;
+$spacing-xl: 25px;

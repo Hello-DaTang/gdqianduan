@@ -1,0 +1,797 @@
+后端：
+1.api调用大模型：
+get方法：/chat
+key：prompt
+value：我应该怎么设置我的家居状态
+例如：
+http://localhost:8080/chat?prompt=我应该怎么设置我的家居状态
+返回
+{
+    "code": 1,
+    "msg": "success",
+    "data": "# 智能家居系统设置指南\n\n作为您的智能家居管家，我可以帮助您设置以下家居状态：\n\n## 常用设置选项\n\n1. **照明系统**\n   - 亮度调节 (0-100%)\n   - 色温调节 (暖光/自然光/冷光)\n   - 定时开关设置\n\n2. **温控系统**\n   - 目标温度设置 (16-30°C)\n   - 工作模式 (制冷/制热/通风/自动)\n   - 湿度控制 (30-70%)\n\n3. **安防系统**\n   - 门窗传感器状态\n   - 摄像头监控设置\n   - 报警系统灵敏度\n\n4. **娱乐系统**\n   - 音响音量/音源选择\n   - 电视/投影仪设置\n   - 多媒体场景模式\n\n## 如何设置\n\n请告诉我您想调整的具体设备或系统，以及您希望达到的效果。例如：\n- \"请将客厅灯光调至50%亮度，暖光模式\"\n- \"卧室温度设置为22°C制热模式\"\n- \"开启离家安防模式\"\n\n您也可以询问特定设备的详细设置方法，我会提供逐步指导。"
+}
+
+2.上传文件至阿里云
+post方法：/upload
+key：image
+value：文件
+例如：
+http://localhost:8080/upload
+返回
+{
+    "code": 1,
+    "msg": "success",
+    "data": "https://web-tlias-datang.oss-cn-beijing.aliyuncs.com/e0e966fc-ffa0-49aa-b75a-c8c41f011848.png"
+}
+
+3.调用墨迹天气api获取天气信息
+get方法：/weather
+key：cityName
+value：沈阳市
+例如：
+http://localhost:8080/weather?cityName=沈阳市
+返回
+{
+    "code": 0,
+    "data": {
+        "city": {
+            "cityId": 94,
+            "counname": "中国",
+            "ianatimezone": "Asia/Shanghai",
+            "name": "沈阳市",
+            "pname": "辽宁省",
+            "secondaryname": "辽宁省",
+            "timezone": "8"
+        },
+        "hourly": [
+            {
+                "condition": "晴",
+                "conditionId": "5",
+                "date": "2025-03-30",
+                "hour": "10",
+                "humidity": "23",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1023",
+                "qpf": "0",
+                "realFeel": "-4",
+                "snow": "0.0",
+                "temp": "1",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "3",
+                "windDegrees": "270",
+                "windDir": "W",
+                "windSpeed": "14.796",
+                "windlevel": "3"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-30",
+                "hour": "11",
+                "humidity": "20",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1027",
+                "qpf": "0.0",
+                "realFeel": "-1",
+                "snow": "0.0",
+                "temp": "1",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "5",
+                "windDegrees": "270",
+                "windDir": "W",
+                "windSpeed": "11.88",
+                "windlevel": "2"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-30",
+                "hour": "12",
+                "humidity": "18",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1026",
+                "qpf": "0.0",
+                "realFeel": "0",
+                "snow": "0.0",
+                "temp": "2",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "5",
+                "windDegrees": "270",
+                "windDir": "W",
+                "windSpeed": "11.52",
+                "windlevel": "2"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-30",
+                "hour": "13",
+                "humidity": "16",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1026",
+                "qpf": "0.0",
+                "realFeel": "1",
+                "snow": "0.0",
+                "temp": "2",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "5",
+                "windDegrees": "270",
+                "windDir": "W",
+                "windSpeed": "11.52",
+                "windlevel": "2"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-30",
+                "hour": "14",
+                "humidity": "15",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1025",
+                "qpf": "0.0",
+                "realFeel": "2",
+                "snow": "0.0",
+                "temp": "4",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "4",
+                "windDegrees": "225",
+                "windDir": "WSW",
+                "windSpeed": "11.88",
+                "windlevel": "2"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-30",
+                "hour": "15",
+                "humidity": "14",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1024",
+                "qpf": "0.0",
+                "realFeel": "2",
+                "snow": "0.0",
+                "temp": "4",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "4",
+                "windDegrees": "225",
+                "windDir": "WSW",
+                "windSpeed": "12.24",
+                "windlevel": "3"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-30",
+                "hour": "16",
+                "humidity": "14",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1023",
+                "qpf": "0.0",
+                "realFeel": "3",
+                "snow": "0.0",
+                "temp": "6",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "4",
+                "windDegrees": "225",
+                "windDir": "WSW",
+                "windSpeed": "11.88",
+                "windlevel": "2"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-30",
+                "hour": "17",
+                "humidity": "15",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1023",
+                "qpf": "0.0",
+                "realFeel": "3",
+                "snow": "0.0",
+                "temp": "6",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "4",
+                "windDegrees": "225",
+                "windDir": "SW",
+                "windSpeed": "11.88",
+                "windlevel": "2"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-30",
+                "hour": "18",
+                "humidity": "19",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1023",
+                "qpf": "0.0",
+                "realFeel": "1",
+                "snow": "0.0",
+                "temp": "4",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "4",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "12.60",
+                "windlevel": "3"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-30",
+                "hour": "19",
+                "humidity": "25",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1023",
+                "qpf": "0.0",
+                "realFeel": "-1",
+                "snow": "0.0",
+                "temp": "2",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "1",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "15.84",
+                "windlevel": "3"
+            },
+            {
+                "condition": "阴",
+                "conditionId": "13",
+                "date": "2025-03-30",
+                "hour": "20",
+                "humidity": "31",
+                "iconDay": "2",
+                "iconNight": "2",
+                "pop": "0",
+                "pressure": "1023",
+                "qpf": "0.0",
+                "realFeel": "-3",
+                "snow": "0.0",
+                "temp": "1",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "1",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "16.56",
+                "windlevel": "3"
+            },
+            {
+                "condition": "阴",
+                "conditionId": "13",
+                "date": "2025-03-30",
+                "hour": "21",
+                "humidity": "32",
+                "iconDay": "2",
+                "iconNight": "2",
+                "pop": "0",
+                "pressure": "1022",
+                "qpf": "0.0",
+                "realFeel": "-4",
+                "snow": "0.0",
+                "temp": "1",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "1",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "16.92",
+                "windlevel": "3"
+            },
+            {
+                "condition": "阴",
+                "conditionId": "13",
+                "date": "2025-03-30",
+                "hour": "22",
+                "humidity": "31",
+                "iconDay": "2",
+                "iconNight": "2",
+                "pop": "0",
+                "pressure": "1022",
+                "qpf": "0.0",
+                "realFeel": "-4",
+                "snow": "0.0",
+                "temp": "-1",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "1",
+                "windDegrees": "180",
+                "windDir": "S",
+                "windSpeed": "18.00",
+                "windlevel": "3"
+            },
+            {
+                "condition": "阴",
+                "conditionId": "13",
+                "date": "2025-03-30",
+                "hour": "23",
+                "humidity": "33",
+                "iconDay": "2",
+                "iconNight": "2",
+                "pop": "0",
+                "pressure": "1022",
+                "qpf": "0.0",
+                "realFeel": "-4",
+                "snow": "0.0",
+                "temp": "-1",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "1",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "18.00",
+                "windlevel": "3"
+            },
+            {
+                "condition": "阴",
+                "conditionId": "13",
+                "date": "2025-03-31",
+                "hour": "0",
+                "humidity": "33",
+                "iconDay": "2",
+                "iconNight": "2",
+                "pop": "0",
+                "pressure": "1021",
+                "qpf": "0.0",
+                "realFeel": "-3",
+                "snow": "0.0",
+                "temp": "-1",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "1",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "18.72",
+                "windlevel": "3"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-31",
+                "hour": "1",
+                "humidity": "32",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1021",
+                "qpf": "0.0",
+                "realFeel": "-3",
+                "snow": "0.0",
+                "temp": "-1",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "1",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "19.44",
+                "windlevel": "3"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-31",
+                "hour": "2",
+                "humidity": "33",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1020",
+                "qpf": "0.0",
+                "realFeel": "-3",
+                "snow": "0.0",
+                "temp": "-1",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "1",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "19.08",
+                "windlevel": "3"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-31",
+                "hour": "3",
+                "humidity": "39",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1020",
+                "qpf": "0.0",
+                "realFeel": "-4",
+                "snow": "0.0",
+                "temp": "-1",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "1",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "18.36",
+                "windlevel": "3"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-31",
+                "hour": "4",
+                "humidity": "47",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1020",
+                "qpf": "0.0",
+                "realFeel": "-4",
+                "snow": "0.0",
+                "temp": "-1",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "1",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "17.64",
+                "windlevel": "3"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-31",
+                "hour": "5",
+                "humidity": "54",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1020",
+                "qpf": "0.0",
+                "realFeel": "-4",
+                "snow": "0.0",
+                "temp": "-3",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "1",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "16.92",
+                "windlevel": "3"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-31",
+                "hour": "6",
+                "humidity": "59",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1020",
+                "qpf": "0.0",
+                "realFeel": "-3",
+                "snow": "0.0",
+                "temp": "1",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "4",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "16.56",
+                "windlevel": "3"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-31",
+                "hour": "7",
+                "humidity": "62",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1020",
+                "qpf": "0.0",
+                "realFeel": "-2",
+                "snow": "0.0",
+                "temp": "2",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "4",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "16.56",
+                "windlevel": "3"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-31",
+                "hour": "8",
+                "humidity": "55",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1020",
+                "qpf": "0.0",
+                "realFeel": "0",
+                "snow": "0.0",
+                "temp": "1",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "4",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "16.92",
+                "windlevel": "3"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-31",
+                "hour": "9",
+                "humidity": "30",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1020",
+                "qpf": "0.0",
+                "realFeel": "2",
+                "snow": "0.0",
+                "temp": "6",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "3",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "16.92",
+                "windlevel": "3"
+            },
+            {
+                "condition": "晴",
+                "conditionId": "1",
+                "date": "2025-03-31",
+                "hour": "10",
+                "humidity": "30",
+                "iconDay": "0",
+                "iconNight": "30",
+                "pop": "0",
+                "pressure": "1019",
+                "qpf": "0.0",
+                "realFeel": "4",
+                "snow": "0.0",
+                "temp": "7",
+                "updatetime": "2025-03-30 10:04:53",
+                "uvi": "4",
+                "windDegrees": "225",
+                "windDir": "SSW",
+                "windSpeed": "17.28",
+                "windlevel": "3"
+            }
+        ]
+    },
+    "msg": "success",
+    "rc": {
+        "c": 0,
+        "p": "success"
+    }
+}
+
+
+4.user/register
+post方法：http://localhost:8080/register
+Body：json格式
+{
+    "username":"Megumi",
+    "password":"jhr123.",
+    "name":"蒋皓然",
+    "entrydate":"2025-03-31"
+}
+返回值为
+{
+    "code": 1,
+    "msg": "success",
+    "data": "注册成功"
+}
+5.user/login
+post方法:http://localhost:8080/login
+Body：json格式
+{
+    "username":"Megumi~",
+    "password":"jhr123."
+}
+返回值为
+{
+    "code": 1,
+    "msg": "success",
+    "data": "eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDM1MzM2NzB9.PBaJYReAD5GGfHaTupKDLJ86NdOYVNylHCy3guhgUn0"
+}
+6.user/update
+put方法：http://localhost:8080/users/update
+Headers: 	token:eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDM1MzM2NzB9.PBaJYReAD5GGfHaTupKDLJ86NdOYVNylHCy3guhgUn0
+Body：json格式
+{
+"username":"Megumi~"
+}
+返回值为
+{
+    "code": 1,
+    "msg": "success",
+    "data": null
+}
+
+7.user/delete
+方法格式：delete/{id}
+delete方法：http://localhost:8080/users/delete/20
+Headers：
+token：
+eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDM1MzM2NzB9.PBaJYReAD5GGfHaTupKDLJ86NdOYVNylHCy3guhgUn0
+返回值为
+{
+    "code": 1,
+    "msg": "success",
+    "data": null
+}
+8.home/add
+post方法：http://localhost:8080/home/add
+Headers：
+token:eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDM1MzM2NzB9.PBaJYReAD5GGfHaTupKDLJ86NdOYVNylHCy3guhgUn0
+Body：{
+    "homeName": "蒋皓然的窗帘",
+    "deviceData": {
+        "status": "open",
+        "position": 50,
+        "material": "cotton",
+        "mode": "manual"
+    }
+}
+返回的值为
+{
+    "code": 1,
+    "msg": "success",
+    "data": null
+}
+
+9.home/getbyid
+方法格式：/home/{id}
+get方法：http://127.0.0.1:8080/home/7
+Headers：
+token:eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDM1MzM2NzB9.PBaJYReAD5GGfHaTupKDLJ86NdOYVNylHCy3guhgUn0
+返回值为
+{
+    "code": 1,
+    "msg": "success",
+    "data": {
+        "id": 7,
+        "userId": 19,
+        "homeName": "蒋皓然的灯",
+        "deviceData": {
+            "mode": "reading",
+            "color": "#FFA500",
+            "status": "on",
+            "brightness": 75
+        },
+        "deviceDataJson": "{\"mode\": \"reading\", \"color\": \"#FFA500\", \"status\": \"on\", \"brightness\": 75}",
+        "createTime": "2025-03-31T16:27:56",
+        "updateTime": "2025-03-31T16:27:56"
+    }
+}
+
+
+10.user/update
+put方法：http://127.0.0.1:8080/home/update
+Headers：
+token:eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDM1MzM2NzB9.PBaJYReAD5GGfHaTupKDLJ86NdOYVNylHCy3guhgUn0
+Body：
+{
+    "id":8,
+    "homeName":"U•ェ•*U"
+}
+
+返回值为
+{
+    "code": 1,
+    "msg": "success",
+    "data": null
+}
+
+11.users/info
+get方法：http://localhost:8080/users/info
+Headers：
+token：eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDQ2NzA3OTV9.1F_5M1kpkBwvjJanfboCxWfN7IV1evSnTmEIh7t71CQ
+返回值为
+{
+    "code": 1,
+    "msg": "success",
+    "data": {
+        "id": 19,
+        "username": "Megumi~",
+        "password": "jhr123.",
+        "name": "蒋皓然",
+        "entrydate": "2025-03-31",
+        "createTime": "2025-03-31T10:17:38",
+        "updateTime": "2025-04-01T15:04:50",
+        "image":null
+    }
+}
+
+12.chatStream/history
+get方法：http://localhost:8080/chatStream/history
+Headers：
+token：eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDQ2NzA3OTV9.1F_5M1kpkBwvjJanfboCxWfN7IV1evSnTmEIh7t71CQ
+params:
+prompt:你好
+sessionID:
+
+返回值为
+data:您的
+
+data:智能
+
+data:家居
+
+data:系统
+
+data:管家
+
+data:，
+
+data:可以
+
+data:叫我
+
+data:小
+
+data:智
+
+data:。
+
+data:我可以
+
+data:帮
+
+data:您
+
+data:控制
+
+data:家里的
+
+data:智能
+
+data:设备
+
+data:、
+
+data:设置
+
+data:场景
+
+data:模式
+
+data:、
+
+data:提供
+
+data:生活
+
+data:建议
+
+data:等
+
+data:。
+
+data:请问
+
+data:有什么
+
+data:可以
+
+data:帮
+
+data:您的
+
+data:吗
+
+data:？
