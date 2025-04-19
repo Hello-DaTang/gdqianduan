@@ -99,6 +99,12 @@
           
           <div class="device-body">
             <h3>{{ device.homeName }}</h3>
+            <div class="device-info">
+              <span class="location-tag" v-if="device.location">
+                <i class="el-icon-location"></i> 
+                {{ getLocationLabel(device.location) }}
+              </span>
+            </div>
             <div class="device-details">
               <template v-if="device.type === 'light'">
                 <div class="detail-item">
@@ -170,9 +176,6 @@
                 :class="{ 'active': newDevice.type === option.value }"
                 @click="newDevice.type = option.value"
               >
-                <div class="type-icon">
-                  <img :src="option.icon" alt="设备图标" />
-                </div>
                 <div class="type-name">{{ option.label }}</div>
               </div>
             </div>
@@ -222,6 +225,24 @@
             <i :class="getDeviceIcon(currentDevice.type)"></i>
           </div>
           <h3>{{ currentDevice.homeName }}</h3>
+        </div>
+        
+        <!-- 设备位置选择 -->
+        <div class="control-section">
+          <div class="control-label">设备位置</div>
+          <el-select v-model="currentDevice.location" placeholder="请选择设备位置" style="width: 100%;">
+            <el-option
+              v-for="room in roomOptions"
+              :key="room.value"
+              :label="room.label"
+              :value="room.value"
+            >
+              <div class="room-option">
+                <i class="el-icon-office-building"></i>
+                <span>{{ room.label }}</span>
+              </div>
+            </el-option>
+          </el-select>
         </div>
         
         <!-- 设备状态开关 -->
@@ -437,6 +458,9 @@ export default {
               type
             }
           })
+
+          // 动态生成位置选项，只显示用户当前拥有设备的位置
+          generateRoomOptions(deviceList)
         } else {
           ElMessage.warning('获取设备列表失败: ' + (response.data?.msg || '未知错误'))
           devices.value = []
@@ -447,6 +471,44 @@ export default {
         devices.value = []
       } finally {
         loading.value = false
+      }
+    }
+
+    // 动态生成位置选项，只显示用户当前拥有设备的位置
+    const generateRoomOptions = (deviceList) => {
+      // 先清空当前位置选项
+      roomOptions.splice(0, roomOptions.length);
+      
+      // 收集所有设备的位置
+      const locationSet = new Set();
+      
+      // 遍历设备列表，收集所有不为空的位置
+      deviceList.forEach(device => {
+        if (device.location && device.location.trim() !== '') {
+          locationSet.add(device.location);
+        }
+      });
+      
+      // 将收集到的位置转为选项格式
+      const locationMapping = {
+        'living': '客厅',
+        'bedroom': '卧室',
+        'kitchen': '厨房',
+        'bathroom': '浴室',
+        'study': '书房'
+      };
+      
+      // 添加到位置选项中
+      locationSet.forEach(location => {
+        roomOptions.push({
+          value: location,
+          label: locationMapping[location] || location // 如果有预设名称则使用，否则使用原始值
+        });
+      });
+      
+      // 确保新设备的位置选项有默认值
+      if (newDevice.room === '' && roomOptions.length > 0) {
+        newDevice.room = roomOptions[0].value;
       }
     }
 
@@ -477,13 +539,26 @@ export default {
       return devices.value.filter(device => device.deviceData.status === status).length
     }
 
+    // 获取位置标签显示名称
+    const getLocationLabel = (locationValue) => {
+      const locationMapping = {
+        'living': '客厅',
+        'bedroom': '卧室',
+        'kitchen': '厨房',
+        'bathroom': '浴室',
+        'study': '书房'
+      };
+      
+      return locationMapping[locationValue] || locationValue;
+    }
+
     // 过滤后的设备列表
     const filteredDevices = computed(() => {
       let result = devices.value
       
       // 根据标签页过滤
       if (activeTab.value !== 'all') {
-        result = result.filter(device => device.room === activeTab.value)
+        result = result.filter(device => device.location === activeTab.value)
       }
       
       // 根据设备状态过滤
@@ -536,7 +611,7 @@ export default {
         const response = await addHome(
           {
             homeName: newDevice.homeName,
-            room: newDevice.room,
+            location: newDevice.room, // 使用location字段传递位置
             deviceData: defaultConfig
           }
         );
@@ -566,11 +641,14 @@ export default {
     // 更新设备
     const updateDevice = async () => {
       try {
+        // 检查是否更改了位置
+        const locationChanged = currentDevice.value.location !== undefined;
+        
         const response = await updateHome(
           {
             id: currentDevice.value.id,
             homeName: currentDevice.value.homeName,
-            room: currentDevice.value.room,
+            location: currentDevice.value.location, // 使用location而非room字段
             deviceData: currentDevice.value.deviceData
           }
         )
@@ -583,6 +661,11 @@ export default {
           const index = devices.value.findIndex(d => d.id === currentDevice.value.id)
           if (index !== -1) {
             devices.value[index] = { ...currentDevice.value }
+          }
+          
+          // 如果更改了位置，重新获取设备列表以刷新位置选项
+          if (locationChanged) {
+            fetchDevices();
           }
         } else {
           ElMessage.error('设备更新失败')
@@ -686,7 +769,8 @@ export default {
       filterDevices,
       showAddRoomDialog,
       addRoom,
-      adding
+      adding,
+      getLocationLabel
     }
   }
 }

@@ -1,7 +1,29 @@
 <template>
   <div class="device-controller">
     <el-form label-position="top" :model="formData">
-      <h3 class="controller-title">{{ device.homeName }} 控制面板</h3>
+      <div class="controller-header">
+        <div class="device-image">
+          <img :src="getDeviceImage(deviceType)" alt="设备图片" />
+        </div>
+        <h3 class="controller-title">{{ device.homeName }} 控制面板</h3>
+      </div>
+      
+      <!-- 设备位置选择 -->
+      <el-form-item label="设备位置">
+        <el-select v-model="location" placeholder="请选择设备位置" style="width: 100%;">
+          <el-option
+            v-for="room in roomOptions"
+            :key="room.value"
+            :label="room.label"
+            :value="room.value"
+          >
+            <div class="room-option">
+              <i class="el-icon-office-building"></i>
+              <span>{{ room.label }}</span>
+            </div>
+          </el-option>
+        </el-select>
+      </el-form-item>
       
       <div v-for="option in configOptions" :key="option.key">
         <!-- 开关类型的控制项 -->
@@ -66,25 +88,47 @@ export default {
     deviceType: {
       type: String,
       required: true
+    },
+    roomOptions: {
+      type: Array,
+      default: () => [
+        { label: '客厅', value: 'living' },
+        { label: '卧室', value: 'bedroom' },
+        { label: '厨房', value: 'kitchen' },
+        { label: '浴室', value: 'bathroom' }
+      ]
     }
   },
   data() {
     return {
       formData: {},
-      configOptions: []
+      configOptions: [],
+      location: ''
     };
   },
   created() {
     // 获取设备类型的配置选项
     this.configOptions = getConfigOptions(this.deviceType);
     
-    // 初始化表单数据
+    // 初始化表单数据和位置
     this.initFormData();
   },
   methods: {
     // 初始化表单数据
     initFormData() {
       this.formData = { ...this.device.deviceData };
+      this.location = this.device.location || '';
+    },
+    
+    // 根据设备类型获取设备图片
+    getDeviceImage(type) {
+      const images = {
+        'light': require('@/assets/images/device/灯光logo.png'),
+        'curtain': require('@/assets/images/device/窗帘logo.png'),
+        'airConditioner': require('@/assets/images/device/空调logo.png'),
+        'doorLock': require('@/assets/images/device/门锁logo.png')
+      };
+      return images[type] || require('@/assets/images/device/灯光logo.png');
     },
     
     // 获取开关状态的文本
@@ -146,14 +190,16 @@ export default {
         const success = await deviceService.updateDevice(
           this.device.id,
           null, // 不更新名称
-          this.formData
+          this.formData,
+          this.location // 更新位置
         );
         
         if (success) {
           ElMessage.success('设备更新成功');
           this.$emit('saved', {
             ...this.device,
-            deviceData: { ...this.formData }
+            deviceData: { ...this.formData },
+            location: this.location
           });
         } else {
           ElMessage.error('设备更新失败');
@@ -171,8 +217,32 @@ export default {
   padding: 20px;
 }
 
+.controller-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.device-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  background: #f5f7fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 15px;
+  
+  img {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+  }
+}
+
 .controller-title {
-  margin: 0 0 20px;
+  margin: 0;
   text-align: center;
   font-size: 18px;
   color: #303133;
@@ -183,5 +253,15 @@ export default {
   justify-content: flex-end;
   margin-top: 30px;
   gap: 10px;
+}
+
+.room-option {
+  display: flex;
+  align-items: center;
+  
+  i {
+    margin-right: 8px;
+    color: #409EFF;
+  }
 }
 </style>

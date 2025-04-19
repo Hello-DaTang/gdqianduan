@@ -62,9 +62,10 @@ const deviceService = {
    * 创建新设备
    * @param {string} name 设备名称
    * @param {string} type 设备类型
+   * @param {string} location 位置 (可选)
    * @returns {Promise} 返回创建结果
    */
-  async createDevice(name, type) {
+  async createDevice(name, type, location) {
     try {
       // 获取设备类型的默认配置
       const defaultConfig = getDefaultConfig(type);
@@ -78,6 +79,11 @@ const deviceService = {
         homeName: name,
         deviceData: defaultConfig
       };
+      
+      // 如果有位置信息，添加到请求数据中
+      if (location) {
+        deviceData.location = location;
+      }
       
       // 调用API添加设备
       const response = await addDevice(deviceData);
@@ -94,9 +100,10 @@ const deviceService = {
    * @param {number} id 设备ID
    * @param {string} name 设备名称 (可选)
    * @param {object} config 设备配置 (可选)
+   * @param {string} location 位置 (可选)
    * @returns {Promise} 返回更新结果
    */
-  async updateDevice(id, name, config) {
+  async updateDevice(id, name, config, location) {
     try {
       // 构建更新数据
       const updateData = { id };
@@ -107,6 +114,11 @@ const deviceService = {
       
       if (config) {
         updateData.deviceData = config;
+      }
+      
+      // 如果提供了位置信息，添加到更新数据中
+      if (location !== undefined) {
+        updateData.location = location;
       }
       
       // 调用API更新设备
