@@ -1,15 +1,19 @@
 import request from '@/utils/request'
 
 // 获取所有设备
-export function getAllDevices() {
+export function getAllHomes() {
   return request({
-    url: '/home/list',
-    method: 'get'
+    url: '/home',
+    method: 'get',
+    params: {
+      page: 1,
+      pageSize: 50 // 获取足够多的设备
+    }
   })
 }
 
 // 获取设备详情
-export function getDeviceById(id) {
+export function getHomeById(id) {
   return request({
     url: `/home/${id}`,
     method: 'get'
@@ -17,7 +21,7 @@ export function getDeviceById(id) {
 }
 
 // 添加设备
-export function addDevice(data) {
+export function addHome(data) {
   return request({
     url: '/home/add',
     method: 'post',
@@ -26,7 +30,7 @@ export function addDevice(data) {
 }
 
 // 更新设备
-export function updateDevice(data) {
+export function updateHome(data) {
   return request({
     url: '/home/update',
     method: 'put',
@@ -35,7 +39,7 @@ export function updateDevice(data) {
 }
 
 // 删除设备
-export function deleteDevice(id) {
+export function deleteHome(id) {
   return request({
     url: `/home/delete/${id}`,
     method: 'delete'

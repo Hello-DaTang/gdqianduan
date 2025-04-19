@@ -120,6 +120,7 @@
   import { ElMessage } from 'element-plus'
   import { getUserInfo, updateUser } from '@/api/user'
   import { uploadFile } from '@/api/upload'
+  import { getUserOperate } from '@/api/operatelog'
   import { removeToken } from '@/utils/auth'
   import ModernPageContainer from '@/components/layout/ModernPageContainer.vue'
   import ModernCard from '@/components/layout/ModernCard.vue'
@@ -201,12 +202,65 @@
       }
       
       // 活动记录
-      const activities = ref([
-        { content: '登录系统', time: '2025-03-31 16:30:00', type: 'success' },
-        { content: '更新了个人信息', time: '2025-03-31 15:20:00', type: 'info' },
-        { content: '添加了新设备: 客厅灯', time: '2025-03-31 14:10:00', type: 'primary' },
-        { content: '修改了设备状态', time: '2025-03-31 12:45:00', type: 'warning' }
-      ])
+      const activities = ref([])
+      
+      // 获取操作日志数据
+      const fetchOperateLog = async () => {
+        try {
+          const response = await getUserOperate()
+          if (response && response.data.code === 1) {
+            // 将操作日志数据转换为活动记录格式
+            const operateLogData = response.data.data.rows || []
+            const activityList = operateLogData.map(log => {
+              // 为不同的操作类型设置不同的类型标识
+              let type = 'info'
+              let content = ''
+              
+              // 根据方法名判断操作类型并设置相应的类型和内容
+              if (log.methodName.includes('save') || log.methodName.includes('add')) {
+                type = 'primary'
+                content = `添加了新设备: ${log.methodParams.includes('homeName') ? 
+                  log.methodParams.match(/homeName=([^,)]+)/)?.[1] || '智能设备' : '智能设备'}`
+              } else if (log.methodName.includes('update')) {
+                type = 'info'
+                content = `更新了${log.className.includes('User') ? '个人信息' : '设备信息'}`
+              } else if (log.methodName.includes('delete')) {
+                type = 'warning'
+                content = '删除了设备'
+              } else if (log.methodName.includes('login')) {
+                type = 'success'
+                content = '登录系统'
+              } else {
+                content = `执行了${log.methodName}操作`
+              }
+              
+              // 格式化操作时间
+              const operateTime = new Date(log.operateTime).toLocaleString('zh-CN')
+              
+              return {
+                content,
+                time: operateTime,
+                type,
+                rawTime: new Date(log.operateTime) // 保存原始时间用于排序
+              }
+            })
+            
+            // 按时间倒序排列（最新的在最前面）
+            activityList.sort((a, b) => b.rawTime - a.rawTime)
+            
+            // 更新活动记录
+            activities.value = activityList
+          } else {
+            ElMessage.warning('获取操作日志失败')
+          }
+        } catch (error) {
+          console.error('获取操作日志出错:', error)
+          // 如果获取失败，使用默认数据
+          activities.value = [
+            { content: '登录系统', time: new Date().toLocaleString('zh-CN'), type: 'success' }
+          ]
+        }
+      }
       
       // 获取用户信息
       const fetchUserInfo = async () => {
@@ -378,6 +432,7 @@
       
       onMounted(() => {
         fetchUserInfo()
+        fetchOperateLog()
       })
       
       return {

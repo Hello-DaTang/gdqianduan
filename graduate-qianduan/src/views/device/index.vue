@@ -3,7 +3,7 @@
     <!-- 顶部统计卡片 -->
     <el-row :gutter="20">
       <el-col :xs="12" :md="6">
-        <div class="stat-box">
+        <div class="stat-box" @click="filterDevices('all')" :class="{ active: deviceFilter === 'all' }">
           <div class="stat-icon">
             <i class="el-icon-s-platform"></i>
           </div>
@@ -15,7 +15,7 @@
         </div>
       </el-col>
       <el-col :xs="12" :md="6">
-        <div class="stat-box online">
+        <div class="stat-box online" @click="filterDevices('online')" :class="{ active: deviceFilter === 'online' }">
           <div class="stat-icon">
             <i class="el-icon-s-data"></i>
           </div>
@@ -27,7 +27,7 @@
         </div>
       </el-col>
       <el-col :xs="12" :md="6">
-        <div class="stat-box offline">
+        <div class="stat-box offline" @click="filterDevices('offline')" :class="{ active: deviceFilter === 'offline' }">
           <div class="stat-icon">
             <i class="el-icon-s-release"></i>
           </div>
@@ -64,11 +64,17 @@
       </div>
       
       <el-tabs v-model="activeTab" class="device-tabs">
-        <el-tab-pane label="所有设备" name="all"></el-tab-pane>
-        <el-tab-pane label="客厅" name="living"></el-tab-pane>
-        <el-tab-pane label="卧室" name="bedroom"></el-tab-pane>
-        <el-tab-pane label="厨房" name="kitchen"></el-tab-pane>
+        <el-tab-pane label="所有位置" name="all"></el-tab-pane>
+        <el-tab-pane 
+          v-for="room in roomOptions" 
+          :key="room.value" 
+          :label="room.label" 
+          :name="room.value"
+        ></el-tab-pane>
       </el-tabs>
+      <button class="add-room-button" @click="showAddRoomDialog">
+        <i class="el-icon-plus">+</i>
+      </button>
     </div>
     
     <!-- 设备网格 -->
@@ -83,7 +89,7 @@
         >
           <div class="device-header">
             <div class="device-type">
-              <i :class="getDeviceIcon(device.type)"></i>
+              <img :src="getDeviceImage(device.type)" alt="设备图标" class="device-icon" />
             </div>
             <div class="device-status">
               <div class="status-dot" :class="{'status-on': device.deviceData.status === 'on'}"></div>
@@ -130,41 +136,77 @@
     <!-- 添加设备对话框 -->
     <el-dialog 
       v-model="addDeviceDialogVisible" 
-      title="添加设备" 
-      width="400px"
+      title="添加新设备"
+      width="450px"
       destroy-on-close
+      custom-class="modern-dialog"
+      top="4vh"
     >
-      <div class="dialog-content">
+      <div class="add-device-dialog">
+        <div class="device-dialog-header">
+          <div class="dialog-icon">
+            <i class="el-icon-plus"></i>
+          </div>
+          <h3>选择您想要添加的设备类型</h3>
+          <p>添加新的智能设备到您的智能家居系统</p>
+        </div>
+        
         <el-form :model="newDevice" label-position="top">
           <el-form-item label="设备名称">
-            <el-input v-model="newDevice.homeName" placeholder="输入设备名称" />
+            <modern-input 
+              v-model="newDevice.homeName" 
+              placeholder="请输入设备名称，例如：客厅灯"
+              prefix-icon="el-icon-edit"
+              style="width: 100%;"
+            />
           </el-form-item>
+          
           <el-form-item label="设备类型">
-            <el-select v-model="newDevice.type" placeholder="请选择设备类型" style="width: 100%">
-              <el-option v-for="option in deviceOptions" :key="option.value" :label="option.label" :value="option.value">
-                <div class="device-option">
-                  <i :class="option.icon"></i>
-                  <span>{{ option.label }}</span>
+            <div class="device-type-grid">
+              <div 
+                v-for="option in deviceOptions" 
+                :key="option.value"
+                class="device-type-card"
+                :class="{ 'active': newDevice.type === option.value }"
+                @click="newDevice.type = option.value"
+              >
+                <div class="type-icon">
+                  <img :src="option.icon" alt="设备图标" />
+                </div>
+                <div class="type-name">{{ option.label }}</div>
+              </div>
+            </div>
+          </el-form-item>
+
+          <el-form-item label="位置">
+            <el-select v-model="newDevice.room" placeholder="请选择设备位置" style="width: 100%">
+              <el-option
+                v-for="room in roomOptions"
+                :key="room.value"
+                :label="room.label"
+                :value="room.value"
+              >
+                <div class="room-option">
+                  <i class="el-icon-office-building"></i>
+                  <span>{{ room.label }}</span>
                 </div>
               </el-option>
             </el-select>
           </el-form-item>
-          <el-form-item label="房间">
-            <el-select v-model="newDevice.room" placeholder="请选择房间" style="width: 100%">
-              <el-option label="客厅" value="living"></el-option>
-              <el-option label="卧室" value="bedroom"></el-option>
-              <el-option label="厨房" value="kitchen"></el-option>
-              <el-option label="浴室" value="bathroom"></el-option>
-            </el-select>
-          </el-form-item>
         </el-form>
+        
+        <div class="dialog-preview">
+          <div class="preview-box" :class="newDevice.type">
+            <i :class="getDeviceIcon(newDevice.type)"></i>
+            <span>{{ newDevice.homeName || '新设备' }}</span>
+          </div>
+        </div>
+        
+        <div class="dialog-footer">
+          <modern-button text="取消" @click="addDeviceDialogVisible = false" />
+          <modern-button type="primary" text="添加设备" @click="addDevice" :loading="adding" />
+        </div>
       </div>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="addDeviceDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="addDevice">确认</el-button>
-        </span>
-      </template>
     </el-dialog>
 
     <!-- 控制设备对话框 -->
@@ -247,38 +289,119 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 添加位置对话框 -->
+    <el-dialog
+      v-model="addRoomDialogVisible"
+      title="添加新位置"
+      width="400px"
+      destroy-on-close
+      custom-class="room-dialog modern-dialog"
+    >
+      <div class="add-room-dialog">
+        <div class="room-dialog-header">
+          <div class="dialog-icon">
+            <i class="el-icon-office-building"></i>
+          </div>
+          <h3>添加新的位置</h3>
+          <p>为您的智能设备创建新的位置分组</p>
+        </div>
+        
+        <el-form :model="newRoom" label-position="top">
+          <el-form-item label="位置名称" >
+            <modern-input
+              v-model="newRoom.name"
+              placeholder="请输入位置名称，例如：书房"
+              prefix-icon="el-icon-office-building"
+              style="width: 100%;"
+            />
+          </el-form-item>
+          
+          <el-form-item label="位置标识" class="small-text">
+            <modern-input
+              v-model="newRoom.value"
+              placeholder="位置唯一标识，如：study"
+              prefix-icon="el-icon-key"
+              style="width: 100%;"
+            />
+            <div class="tip-text">提示：标识只能包含英文字母、数字和下划线</div>
+          </el-form-item>
+        </el-form>
+        
+        <div class="dialog-footer">
+          <modern-button text="取消" @click="addRoomDialogVisible = false" />
+          <modern-button type="primary" text="添加位置" @click="addRoom" />
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
 import { ref, reactive, computed, onMounted } from 'vue'
-import axios from 'axios'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { detectDeviceType, getDefaultConfig } from '@/utils/deviceTypes'
+import ModernButton from '@/components/ui/ModernButton.vue'
+import ModernInput from '@/components/ui/ModernInput.vue'
+import { addHome, deleteHome, getAllHomes, updateHome } from '@/api/device'
 
 export default {
   name: 'DeviceView',
+  components: {
+    ModernButton,
+    ModernInput
+  },
   setup() {
     const devices = ref([])
+    const loading = ref(false)
     const addDeviceDialogVisible = ref(false)
     const controlDeviceDialogVisible = ref(false)
+    const addRoomDialogVisible = ref(false)
     const currentDevice = ref(null)
     const searchQuery = ref('')
     const activeTab = ref('all')
+    const deviceFilter = ref('all')
+    const adding = ref(false)
     
+    // 新设备表单
     const newDevice = reactive({
       homeName: '',
       type: 'light',
-      room: 'living',
+      room: '',
       deviceData: {}
     })
 
+    // 新位置表单
+    const newRoom = reactive({
+      name: '',
+      value: ''
+    })
+
+    // 设备类型选项
     const deviceOptions = [
-      { label: '灯光', value: 'light', icon: 'el-icon-lightbulb' },
-      { label: '窗帘', value: 'curtain', icon: 'el-icon-picture-outline-round' },
-      { label: '空调', value: 'aircon', icon: 'el-icon-cold-drink' },
-      { label: '门锁', value: 'lock', icon: 'el-icon-lock' }
+      { 
+        label: '灯光', 
+        value: 'light', 
+        icon: require('@/assets/images/device/灯光logo.png') 
+      },
+      { 
+        label: '窗帘', 
+        value: 'curtain', 
+        icon: require('@/assets/images/device/窗帘logo.png')
+      },
+      { 
+        label: '空调', 
+        value: 'airConditioner', 
+        icon: require('@/assets/images/device/空调logo.png')
+      },
+      { 
+        label: '门锁', 
+        value: 'doorLock', 
+        icon: require('@/assets/images/device/门锁logo.png')
+      }
     ]
 
+    // 灯光颜色选项
     const colorOptions = [
       { name: '白色', value: '#FFFFFF' },
       { name: '暖白', value: '#F5DEB3' },
@@ -288,50 +411,42 @@ export default {
       { name: '绿色', value: '#00FF00' }
     ]
 
-    // 获取设备列表
+    // 房间选项
+    const roomOptions = reactive([
+      { label: '客厅', value: 'living' },
+      { label: '卧室', value: 'bedroom' },
+      { label: '厨房', value: 'kitchen' }
+    ])
+
+    // 从后端获取设备列表
     const fetchDevices = async () => {
+      loading.value = true
       try {
-        // 模拟从后端获取设备列表
-        devices.value = [
-          {
-            id: 1,
-            homeName: '客厅灯',
-            type: 'light',
-            room: 'living',
-            deviceData: {
-              status: 'on',
-              brightness: 75,
-              color: '#FFFFFF',
-              mode: 'normal'
+
+        const response = await getAllHomes()
+
+        if (response.data && response.data.code === 1) {
+          const deviceList = response.data.data.rows || []
+          
+          // 处理设备数据，添加设备类型
+          devices.value = deviceList.map(device => {
+            // 检测设备类型
+            const type = detectDeviceType(device.deviceData)
+            return {
+              ...device,
+              type
             }
-          },
-          {
-            id: 2,
-            homeName: '卧室窗帘',
-            type: 'curtain',
-            room: 'bedroom',
-            deviceData: {
-              status: 'off',
-              position: 50,
-              material: 'cotton',
-              mode: 'manual'
-            }
-          },
-          {
-            id: 3,
-            homeName: '卧室灯',
-            type: 'light',
-            room: 'bedroom',
-            deviceData: {
-              status: 'on',
-              brightness: 50,
-              color: '#F5DEB3',
-              mode: 'normal'
-            }
-          }
-        ]
+          })
+        } else {
+          ElMessage.warning('获取设备列表失败: ' + (response.data?.msg || '未知错误'))
+          devices.value = []
+        }
       } catch (error) {
+        console.error('获取设备列表出错:', error)
         ElMessage.error('获取设备列表失败')
+        devices.value = []
+      } finally {
+        loading.value = false
       }
     }
 
@@ -340,10 +455,21 @@ export default {
       const icons = {
         light: 'el-icon-lightbulb',
         curtain: 'el-icon-picture-outline-round',
-        aircon: 'el-icon-cold-drink',
-        lock: 'el-icon-lock'
+        airConditioner: 'el-icon-cold-drink',
+        doorLock: 'el-icon-lock'
       }
       return icons[type] || 'el-icon-s-platform'
+    }
+
+    // 根据设备类型获取图片
+    const getDeviceImage = (type) => {
+      const images = {
+        light: require('@/assets/images/device/灯光logo.png'),
+        curtain: require('@/assets/images/device/窗帘logo.png'),
+        airConditioner: require('@/assets/images/device/空调logo.png'),
+        doorLock: require('@/assets/images/device/门锁logo.png')
+      }
+      return images[type] || require('@/assets/images/device/灯光logo.png') // 默认使用灯光图标
     }
     
     // 获取特定状态的设备数量
@@ -358,6 +484,13 @@ export default {
       // 根据标签页过滤
       if (activeTab.value !== 'all') {
         result = result.filter(device => device.room === activeTab.value)
+      }
+      
+      // 根据设备状态过滤
+      if (deviceFilter.value === 'online') {
+        result = result.filter(device => device.deviceData.status === 'on')
+      } else if (deviceFilter.value === 'offline') {
+        result = result.filter(device => device.deviceData.status === 'off')
       }
       
       // 根据搜索关键词过滤
@@ -377,58 +510,50 @@ export default {
       // 重置表单
       newDevice.homeName = ''
       newDevice.type = 'light'
-      newDevice.room = 'living'
+      newDevice.room = ''
       // 显示对话框
       addDeviceDialogVisible.value = true
     }
 
     // 添加设备
     const addDevice = async () => {
+      // 验证表单
+      if (!newDevice.homeName) {
+        ElMessage.warning('请输入设备名称');
+        return;
+      }
+      
       try {
-        // 根据设备类型设置默认设备数据
-        if (newDevice.type === 'light') {
-          newDevice.deviceData = {
-            status: 'off',
-            brightness: 50,
-            color: '#FFFFFF',
-            mode: 'normal'
-          }
-        } else if (newDevice.type === 'curtain') {
-          newDevice.deviceData = {
-            status: 'off',
-            position: 0,
-            material: 'cotton',
-            mode: 'manual'
-          }
+        adding.value = true;
+        
+        // 根据设备类型获取默认配置
+        const defaultConfig = getDefaultConfig(newDevice.type);
+        if (!defaultConfig) {
+          ElMessage.error('不支持的设备类型');
+          return;
         }
-
-        const token = localStorage.getItem('smart_home_token')
-        const response = await axios.post(
-          'http://localhost:8080/home/add',
+        
+        const response = await addHome(
           {
             homeName: newDevice.homeName,
-            deviceData: newDevice.deviceData
-          },
-          { headers: { token } }
-        )
+            room: newDevice.room,
+            deviceData: defaultConfig
+          }
+        );
 
         if (response.data && response.data.code === 1) {
-          ElMessage.success('设备添加成功')
-          addDeviceDialogVisible.value = false
-          // 手动添加到列表中，实际应用中应该重新获取列表
-          devices.value.push({
-            id: Date.now(), // 临时ID
-            homeName: newDevice.homeName,
-            type: newDevice.type,
-            room: newDevice.room,
-            deviceData: { ...newDevice.deviceData }
-          })
+          ElMessage.success('设备添加成功');
+          addDeviceDialogVisible.value = false;
+          // 重新加载设备列表
+          fetchDevices();
         } else {
-          ElMessage.error('设备添加失败')
+          ElMessage.error('设备添加失败: ' + (response.data?.msg || '未知错误'));
         }
       } catch (error) {
-        console.error('添加设备出错:', error)
-        ElMessage.error('添加设备请求失败')
+        console.error('添加设备出错:', error);
+        ElMessage.error('添加设备请求失败');
+      } finally {
+        adding.value = false;
       }
     }
 
@@ -441,15 +566,13 @@ export default {
     // 更新设备
     const updateDevice = async () => {
       try {
-        const token = localStorage.getItem('smart_home_token')
-        const response = await axios.put(
-          'http://localhost:8080/home/update',
+        const response = await updateHome(
           {
             id: currentDevice.value.id,
             homeName: currentDevice.value.homeName,
+            room: currentDevice.value.room,
             deviceData: currentDevice.value.deviceData
-          },
-          { headers: { token } }
+          }
         )
 
         if (response.data && response.data.code === 1) {
@@ -473,13 +596,63 @@ export default {
     // 删除设备
     const deleteDevice = async (id) => {
       try {
-        // 这里应该调用删除设备的API
-        ElMessage.success('设备删除成功')
-        // 从列表中移除
-        devices.value = devices.value.filter(device => device.id !== id)
+        // 弹出确认框
+        await ElMessageBox.confirm(
+          '确认要删除这个设备吗？此操作不可恢复。',
+          '删除确认',
+          {
+            confirmButtonText: '确认删除',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        );
+        
+        // 调用删除设备的API
+        const response = await deleteHome(id);
+
+        if (response.data && response.data.code === 1) {
+          ElMessage.success('设备删除成功');
+          // 从列表中移除
+          devices.value = devices.value.filter(device => device.id !== id);
+        } else {
+          ElMessage.error('设备删除失败: ' + (response.data?.msg || '未知错误'));
+        }
       } catch (error) {
-        ElMessage.error('设备删除失败')
+        // 如果是用户取消操作，不显示错误
+        if (error === 'cancel' || error.toString().includes('cancel')) {
+          return;
+        }
+        console.error('删除设备出错:', error);
+        ElMessage.error('删除设备失败');
       }
+    }
+
+    // 过滤设备
+    const filterDevices = (filter) => {
+      deviceFilter.value = filter
+    }
+
+    // 显示添加房间对话框
+    const showAddRoomDialog = () => {
+      // 重置表单
+      newRoom.name = ''
+      newRoom.value = ''
+      addRoomDialogVisible.value = true
+    }
+
+    // 添加房间
+    const addRoom = () => {
+      if (!newRoom.name || !newRoom.value) {
+        ElMessage.warning('请输入位置名称和标识')
+        return
+      }
+      if (!/^[a-zA-Z0-9_]+$/.test(newRoom.value)) {
+        ElMessage.warning('位置标识只能包含英文字母、数字和下划线')
+        return
+      }
+      roomOptions.push({ label: newRoom.name, value: newRoom.value })
+      addRoomDialogVisible.value = false
+      ElMessage.success('位置添加成功')
     }
 
     onMounted(() => {
@@ -488,22 +661,32 @@ export default {
 
     return {
       devices,
+      loading,
       addDeviceDialogVisible,
       controlDeviceDialogVisible,
+      addRoomDialogVisible,
       currentDevice,
       newDevice,
+      newRoom,
       deviceOptions,
       colorOptions,
+      roomOptions,
       searchQuery,
       activeTab,
+      deviceFilter,
       filteredDevices,
       getDeviceIcon,
+      getDeviceImage,
       getDeviceCount,
       showAddDeviceDialog,
       addDevice,
       controlDevice,
       updateDevice,
-      deleteDevice
+      deleteDevice,
+      filterDevices,
+      showAddRoomDialog,
+      addRoom,
+      adding
     }
   }
 }
@@ -528,6 +711,7 @@ export default {
   align-items: center;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(66, 133, 244, 0.2);
+  cursor: pointer;
 }
 
 .stat-box:hover {
@@ -541,6 +725,10 @@ export default {
 
 .stat-box.offline {
   background: linear-gradient(135deg, #9AA0A6, #5F6368);
+}
+
+.stat-box.active {
+  border: 2px solid #FFD700;
 }
 
 .stat-icon {
@@ -606,6 +794,7 @@ export default {
 
 /* 设备导航样式 */
 .device-navigation {
+  position: relative;
   background: white;
   border-radius: 12px;
   padding: 20px;
@@ -628,6 +817,66 @@ export default {
 
 .nav-actions {
   width: 200px;
+}
+
+/* 添加位置按钮样式 */
+.add-room-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+.add-room-btn i {
+  font-size: 18px;
+  color: #4285F4;
+  padding: 5px;
+  transition: all 0.3s;
+}
+
+.add-room-btn i:hover {
+  transform: rotate(90deg);
+  color: #34A853;
+}
+
+.add-room-button {
+  position: absolute;
+  right: 20px; /* 与右侧边缘保持20px距离 */
+  top: 63px; /* 根据您的设计调整，让按钮处于标签页行的垂直中心 */
+  background: #4285F4; /* 蓝色背景更醒目 */
+  color: white;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  /*z-index: 10;  确保在最顶层 */
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+  border: none;
+  transition: all 0.3s;
+}
+
+.add-room-button i {
+  font-size: 18px;
+  color: white;
+  transition: all 0.3s;
+}
+
+.add-room-button:hover i {
+}
+
+.room-option {
+  display: flex;
+  align-items: center;
+}
+
+room-option i {
+  margin-right: 8px;
+  font-size: 16px;
+  color: #4285F4;
 }
 
 /* 设备网格样式 */
@@ -676,6 +925,11 @@ export default {
   justify-content: center;
   font-size: 18px;
   color: #4285F4;
+}
+
+.device-icon {
+  width: 100%;
+  height: auto;
 }
 
 .device-status {
@@ -833,5 +1087,153 @@ export default {
 
 :deep(.el-tabs__item.is-active) {
   color: #4285F4;
+}
+
+/* 添加设备对话框样式 */
+.modern-dialog {
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  margin-top: -8vh !important;
+}
+
+.add-device-dialog {
+  padding: 20px;
+}
+
+.device-dialog-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.dialog-icon {
+  font-size: 40px;
+  color: #4285F4;
+  margin-bottom: 10px;
+}
+
+.device-dialog-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.device-dialog-header p {
+  font-size: 14px;
+  color: #5F6368;
+  margin: 5px 0 0;
+}
+
+.device-type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* 每行显示2个 */
+  gap: 70px;
+  margin-bottom: 20px;
+  width: 100%
+}
+
+.device-type-card {
+  background: #f8faff;
+  border: 1px solid #e8eaef;
+  border-radius: 10px;
+  padding: 20px 15px; /* 调整内边距 */
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: flex; /* 使用flex布局 */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 40px; /* 固定高度 */
+}
+
+.device-type-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(66, 133, 244, 0.2);
+}
+
+.device-type-card.active {
+  background: rgba(66, 133, 244, 0.1);
+  border-color: #4285F4;
+  color: #4285F4;
+  box-shadow: 0 5px 15px rgba(66, 133, 244, 0.25);
+}
+
+.device-type-card.active .type-icon {
+  color: #4285F4;
+}
+
+.type-icon {
+  font-size: 32px;  /* 图标更大 */
+  margin-bottom: 12px;
+  color: #5F6368;
+}
+
+.type-name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.dialog-preview {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.preview-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #f0f4f9;
+  font-size: 24px;
+  color: #4285F4;
+  margin: 0 auto;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+/* 添加位置对话框样式 */
+.room-dialog {
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.add-room-dialog {
+  padding: 20px;
+}
+
+.room-dialog-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+room-dialog-header .dialog-icon {
+  font-size: 40px;
+  color: #4285F4;
+  margin-bottom: 10px;
+}
+
+room-dialog-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+room-dialog-header p {
+  font-size: 14px;
+  color: #5F6368;
+  margin: 5px 0 0;
+}
+
+.tip-text {
+  font-size: 12px;
+  color: #9AA0A6;
+  margin-top: 5px;
 }
 </style>

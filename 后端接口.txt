@@ -634,7 +634,79 @@ eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3V
     "msg": "success",
     "data": null
 }
-8.home/add
+8.获取默认第一页前十个家居home
+get方法：http://localhost:8080/home
+Headers：token：
+eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDM1MzM2NzB9.PBaJYReAD5GGfHaTupKDLJ86NdOYVNylHCy3guhgUn0
+Params：page:1
+pageSize:10
+返回值为
+{
+    "code": 1,
+    "msg": "success",
+    "data": {
+        "total": 4,
+        "rows": [
+            {
+                "id": 8,
+                "userId": 19,
+                "homeName": "U•ェ•*U",
+                "deviceData": {
+                    "mode": "reading",
+                    "color": "#FFA500",
+                    "status": "on",
+                    "brightness": 75
+                },
+                "deviceDataJson": "{\"mode\": \"reading\", \"color\": \"#FFA500\", \"status\": \"on\", \"brightness\": 75}",
+                "createTime": "2025-03-31T16:57:16",
+                "updateTime": "2025-04-01T15:33:12"
+            },
+            {
+                "id": 10,
+                "userId": 19,
+                "homeName": "蒋皓然的窗帘",
+                "deviceData": {
+                    "mode": "manual",
+                    "status": "open",
+                    "material": "cotton",
+                    "position": 50
+                },
+                "deviceDataJson": "{\"mode\": \"manual\", \"status\": \"open\", \"material\": \"cotton\", \"position\": 50}",
+                "createTime": "2025-04-01T15:27:31",
+                "updateTime": "2025-04-01T15:27:31"
+            },
+            {
+                "id": 9,
+                "userId": 19,
+                "homeName": "蒋皓然的灯",
+                "deviceData": {
+                    "mode": "reading",
+                    "color": "#FFA500",
+                    "status": "on",
+                    "brightness": 75
+                },
+                "deviceDataJson": "{\"mode\": \"reading\", \"color\": \"#FFA500\", \"status\": \"on\", \"brightness\": 75}",
+                "createTime": "2025-03-31T17:03:46",
+                "updateTime": "2025-03-31T17:03:46"
+            },
+            {
+                "id": 7,
+                "userId": 19,
+                "homeName": "蒋皓然的灯",
+                "deviceData": {
+                    "mode": "reading",
+                    "color": "#FFA500",
+                    "status": "on",
+                    "brightness": 75
+                },
+                "deviceDataJson": "{\"mode\": \"reading\", \"color\": \"#FFA500\", \"status\": \"on\", \"brightness\": 75}",
+                "createTime": "2025-03-31T16:27:56",
+                "updateTime": "2025-03-31T16:27:56"
+            }
+        ]
+    }
+}
+9.home/add
 post方法：http://localhost:8080/home/add
 Headers：
 token:eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDM1MzM2NzB9.PBaJYReAD5GGfHaTupKDLJ86NdOYVNylHCy3guhgUn0
@@ -654,7 +726,7 @@ Body：{
     "data": null
 }
 
-9.home/getbyid
+10.home/getbyid
 方法格式：/home/{id}
 get方法：http://127.0.0.1:8080/home/7
 Headers：
@@ -680,7 +752,7 @@ token:eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6I
 }
 
 
-10.user/update
+11.user/update
 put方法：http://127.0.0.1:8080/home/update
 Headers：
 token:eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDM1MzM2NzB9.PBaJYReAD5GGfHaTupKDLJ86NdOYVNylHCy3guhgUn0
@@ -697,7 +769,7 @@ Body：
     "data": null
 }
 
-11.users/info
+12.users/info
 get方法：http://localhost:8080/users/info
 Headers：
 token：eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDQ2NzA3OTV9.1F_5M1kpkBwvjJanfboCxWfN7IV1evSnTmEIh7t71CQ
@@ -717,7 +789,7 @@ token：eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI
     }
 }
 
-12.chatStream/history
+13.chatStream/history
 get方法：http://localhost:8080/chatStream/history
 Headers：
 token：eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDQ2NzA3OTV9.1F_5M1kpkBwvjJanfboCxWfN7IV1evSnTmEIh7t71CQ
@@ -795,3 +867,67 @@ data:您的
 data:吗
 
 data:？
+14.operateLog/info
+get方法：http://localhost:8080/operateLog/info
+Headers：
+token：eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDQ2NzA3OTV9.1F_5M1kpkBwvjJanfboCxWfN7IV1evSnTmEIh7t71CQ
+返回值为
+{
+    "code": 1,
+    "msg": "success",
+    "data": {
+        "total": 76,
+        "rows": [
+            {
+                "id": 1,
+                "operateUser": 19,
+                "operateTime": "2025-03-31T14:41:22",
+                "className": "com.wwx.controller.HomeController",
+                "methodName": "save",
+                "methodParams": "[SmartHome(id=null, userId=null, homeName=蒋皓然的灯, deviceData={\"status\":\"on\",\"brightness\":75,\"color\":\"#FFA500\",\"mode\":\"reading\"}, createTime=null, updateTime=null)]",
+                "returnValue": "{\"code\":1,\"msg\":\"success\"}",
+                "costTime": 959
+            },
+            {
+                "id": 2,
+                "operateUser": 19,
+                "operateTime": "2025-03-31T16:27:56",
+                "className": "com.wwx.controller.HomeController",
+                "methodName": "save",
+                "methodParams": "[SmartHome(id=null, userId=null, homeName=蒋皓然的灯, deviceData={status=on, brightness=75, color=#FFA500, mode=reading}, createTime=null, updateTime=null)]",
+                "returnValue": "{\"code\":1,\"msg\":\"success\"}",
+                "costTime": 1070
+            },
+            {
+                "id": 3,
+                "operateUser": 19,
+                "operateTime": "2025-03-31T16:57:16",
+                "className": "com.wwx.controller.HomeController",
+                "methodName": "save",
+                "methodParams": "[SmartHome(id=null, userId=null, homeName=蒋皓然的灯, deviceData={status=on, brightness=75, color=#FFA500, mode=reading}, deviceDataJson=null, createTime=null, updateTime=null)]",
+                "returnValue": "{\"code\":1,\"msg\":\"success\"}",
+                "costTime": 1001
+            },
+            {
+                "id": 4,
+                "operateUser": 19,
+                "operateTime": "2025-03-31T17:03:46",
+                "className": "com.wwx.controller.HomeController",
+                "methodName": "save",
+                "methodParams": "[SmartHome(id=null, userId=null, homeName=蒋皓然的灯, deviceData={status=on, brightness=75, color=#FFA500, mode=reading}, deviceDataJson=null, createTime=null, updateTime=null)]",
+                "returnValue": "{\"code\":1,\"msg\":\"success\"}",
+                "costTime": 883
+            },
+            {
+                "id": 5,
+                "operateUser": 19,
+                "operateTime": "2025-03-31T17:12:05",
+                "className": "com.wwx.controller.HomeController",
+                "methodName": "update",
+                "methodParams": "[SmartHome(id=8, userId=null, homeName=U•ェ•*U, deviceData=null, deviceDataJson=null, createTime=null, updateTime=null)]",
+                "returnValue": "{\"code\":1,\"msg\":\"success\"}",
+                "costTime": 862
+            }
+        ]
+    }
+}
