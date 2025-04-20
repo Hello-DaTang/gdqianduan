@@ -38,6 +38,55 @@
       </div>
     </div>
     
+    <!-- AI建议卡片 -->
+    <modern-card title="AI智能建议" class="ai-suggestion-card">
+      <div class="ai-card-content">
+        <div class="ai-info">
+          <i class="el-icon-magic-stick"></i>
+          <h3>智能家居AI建议</h3>
+          <p>基于您的设备数据、天气信息和使用习惯，获取AI智能建议，优化您的智能家居体验。</p>
+          
+          <div class="ai-actions">
+            <modern-button 
+              type="primary" 
+              icon="el-icon-cpu"
+              text="一键AI建议" 
+              @click="generateAiSuggestion"
+              :loading="isLoading"
+            ></modern-button>
+            
+            <modern-button 
+              type="info" 
+              icon="el-icon-download"
+              text="下载数据文件" 
+              @click="downloadDataFile"
+              :disabled="!hasCollectedData"
+            ></modern-button>
+          </div>
+        </div>
+        
+        <div class="ai-status">
+          <div v-if="isLoading" class="loading-container">
+            <i class="el-icon-loading"></i>
+            <span>{{ loadingMessage }}</span>
+          </div>
+          
+          <div v-else-if="aiSuggestion" class="suggestion-container">
+            <h4>AI建议</h4>
+            <p>{{ aiSuggestion }}</p>
+            
+            <modern-button 
+              type="success" 
+              icon="el-icon-check"
+              text="应用建议" 
+              @click="applySuggestion"
+              style="margin-top: 16px;"
+            ></modern-button>
+          </div>
+        </div>
+      </div>
+    </modern-card>
+    
     <!-- 轮播图部分 -->
     <modern-card title="智能家居提示">
       <el-carousel height="200px">
@@ -55,11 +104,17 @@
 </template>
 
 <script>
-import { reactive } from 'vue'
+import { computed, onMounted, ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
+import { useStore } from 'vuex'
+import { ElMessage } from 'element-plus'
 import ModernPageContainer from '@/components/layout/ModernPageContainer.vue'
 import ModernCard from '@/components/layout/ModernCard.vue'
 import ModernButton from '@/components/ui/ModernButton.vue'
+import { postAiResponse } from '@/api/chat'
+import { parseDeviceInstructions } from '@/utils/deviceUtils'
+import { detectDeviceType } from '@/utils/deviceTypes'
+
 
 export default {
   name: 'DashboardView',
@@ -70,16 +125,21 @@ export default {
   },
   setup() {
     const router = useRouter()
+    const store = useStore()
     
-    // 统计卡片数据
-    const stats = reactive([
-      { label: '连接设备', value: '16', icon: 'el-icon-connection', color: '#4285F4' },
-      { label: '离线设备', value: '2', icon: 'el-icon-warning', color: '#EA4335' },
-      { label: '今日用电量', value: '9.6 kWh', icon: 'el-icon-lightning', color: '#FBBC05' },
-      { label: '节能表现', value: '良好', icon: 'el-icon-success', color: '#34A853' }
-    ])
+    // 状态变量
+    const isLoading = ref(false)
+    const loadingMessage = ref('')
+    const aiSuggestion = ref('')
+    const hasCollectedData = ref(false)
+    const collectedData = ref({
+      devices: [],
+      weather: {},
+      operateLogs: []
+    })
+    const aiDeviceInstructions = ref(null)
     
-    // 轮播图数据
+    // 轮播提示数据
     const tips = reactive([
       {
         title: '季节变化，温度调节',
@@ -98,15 +158,426 @@ export default {
       }
     ])
     
+    // 从Vuex获取数据的计算属性
+    const deviceList = computed(() => {
+      // 确保deviceList是数组
+      const list = Array.isArray(store.state.device.deviceList) 
+        ? store.state.device.deviceList 
+        : (store.state.device.deviceList?.rows || [])
+      return list
+    })
+    
+    // 根据真实设备数据计算统计卡片内容
+    const stats = computed(() => [
+      { 
+        label: '连接设备', 
+        value: deviceList.value.filter(device => device.deviceData?.status === 'on').length.toString(), 
+        icon: 'el-icon-connection', 
+        color: '#4285F4' 
+      },
+      { 
+        label: '离线设备', 
+        value: deviceList.value.filter(device => device.deviceData?.status === 'off').length.toString(), 
+        icon: 'el-icon-warning', 
+        color: '#EA4335' 
+      },
+      { 
+        label: '今日用电量', 
+        value: '9.6 kWh', // 这个值可能需要从其他API获取
+        icon: 'el-icon-lightning', 
+        color: '#FBBC05' 
+      },
+      { 
+        label: '节能表现', 
+        value: '良好', // 这个值可能需要从其他API获取或根据其他数据计算
+        icon: 'el-icon-success', 
+        color: '#34A853' 
+      }
+    ])
+    
+    const weatherData = computed(() => store.state.weather.weatherData)
+    const operateLogs = computed(() => store.state.operatelog.operateLogs)
+    const isWeatherLoading = computed(() => store.state.weather.loading)
+    
+    // 在组件挂载时预加载数据
+    onMounted(async () => {
+      try {
+        // 并行加载所有数据
+        await Promise.all([
+          store.dispatch('device/fetchDevices'),
+          store.dispatch('weather/fetchWeather'),
+          store.dispatch('operatelog/fetchOperateLogs')
+        ])
+      } catch (error) {
+        console.error('预加载数据失败:', error)
+      }
+    })
+    
+    
+    // 生成AI建议
+    const generateAiSuggestion = async () => {
+      try {
+        isLoading.value = true
+        loadingMessage.value = '正在生成AI建议...'
+        
+        // 收集当前设备数据
+        await store.dispatch('device/fetchDevices', { force: true })
+        
+        // 收集天气数据
+        await store.dispatch('weather/fetchWeather', { force: true })
+        
+        // 收集操作日志
+        await store.dispatch('operatelog/fetchOperateLogs', { force: true })
+        
+        // 构建精简的数据对象
+        const smartHomeData = {
+          devices: deviceList.value.map(device => ({
+            id: device.id,
+            homeName: device.homeName,
+            type: device.type || (device.deviceData ? detectDeviceType(device.deviceData) : 'unknown'),
+            location: device.location,
+            deviceData: device.deviceData
+          })),
+          
+          weather: {
+            city: store.state.weather.currentCity || '沈阳市',
+            current: weatherData.value?.current || {}
+          },
+          
+          operateLogs: Array.isArray(operateLogs.value) ? 
+            operateLogs.value.slice(0, 10) :
+            (operateLogs.value ? [operateLogs.value] : [])
+        }
+        
+        // 设置已收集标志
+        hasCollectedData.value = true
+        collectedData.value = smartHomeData
+        
+        loadingMessage.value = '正在生成AI建议...'
+        
+        // 发送请求给AI
+        const prompt = JSON.stringify(smartHomeData)
+        console.log('发送的数据大小约为:', Math.round(prompt.length/1024), 'KB')
+        
+        // 使用直接返回JSON格式的API获取AI建议
+        const aiResponse = await postAiResponse(prompt)
+        
+        // 处理AI响应
+        if (aiResponse.data && aiResponse.data.code === 0) {
+          try {
+            // 因为后端返回严格的JSON格式，直接解析
+            const jsonResponse = JSON.parse(aiResponse.data.data)
+            
+            // 保存原始AI建议文本
+            aiSuggestion.value = typeof jsonResponse.explanation === 'string' ? 
+              jsonResponse.explanation : 
+              '根据您的设备数据和当前天气情况，AI已经生成了设备控制建议。'
+            
+            // 设置设备指令
+            aiDeviceInstructions.value = {
+              success: true,
+              instructions: jsonResponse
+            }
+            
+            console.log('成功解析到设备控制指令:', jsonResponse)
+          } catch (jsonError) {
+            console.error('解析JSON响应失败:', jsonError)
+            // 如果JSON解析失败，尝试使用原有方法
+            aiSuggestion.value = aiResponse.data.data
+            aiDeviceInstructions.value = parseDeviceInstructions(aiResponse.data.data)
+          }
+        } else {
+          ElMessage.error('获取AI建议失败: ' + (aiResponse.data?.msg || '未知错误'))
+        }
+        
+        isLoading.value = false
+        ElMessage.success('AI建议生成成功！')
+      } catch (error) {
+        console.error('生成AI建议失败:', error)
+        ElMessage.error('生成AI建议失败: ' + (error.message || '未知错误'))
+        isLoading.value = false
+      }
+    }
+    
+    // 应用AI建议
+    const applySuggestion = async () => {
+      if (!aiSuggestion.value) {
+        ElMessage.warning('没有可应用的AI建议')
+        return
+      }
+      
+      // 检查是否有解析出的设备控制指令
+      if (!aiDeviceInstructions.value || !aiDeviceInstructions.value.success) {
+        ElMessage.warning('无法应用AI建议：未能解析出有效的设备控制指令')
+        return
+      }
+      
+      try {
+        isLoading.value = true
+        loadingMessage.value = '正在应用AI建议...'
+        
+        const instructions = aiDeviceInstructions.value.instructions
+        
+        // 确保指令包含设备数组
+        if (!instructions.devices || !Array.isArray(instructions.devices) || instructions.devices.length === 0) {
+          throw new Error('无效的设备控制指令格式')
+        }
+        
+        // 应用每个设备的更新
+        for (const device of instructions.devices) {
+          if (!device.id || !device.deviceData) {
+            console.warn('设备指令缺少ID或数据:', device)
+            continue
+          }
+          
+          // 更新设备
+          await store.dispatch('device/updateDevice', {
+            id: device.id,
+            deviceData: device.deviceData
+          })
+          
+          console.log(`成功更新设备 ${device.id}:`, device.deviceData)
+        }
+        
+        // 更新成功后刷新设备列表
+        await store.dispatch('device/fetchDevices', { force: true })
+        
+        ElMessage.success('AI建议已成功应用到设备')
+        isLoading.value = false
+      } catch (error) {
+        console.error('应用AI建议失败:', error)
+        ElMessage.error('应用AI建议失败: ' + (error.message || '未知错误'))
+        isLoading.value = false
+      }
+    }
+    
+    // 下载数据文件
+    const downloadDataFile = async () => {
+      if (!hasCollectedData.value) {
+        ElMessage.warning('请先点击"一键AI建议"收集数据')
+        return
+      }
+      
+      try {
+        // 显示上传中
+        isLoading.value = true
+        loadingMessage.value = '正在准备数据...'
+        
+        // 获取完整的设备数据
+        await store.dispatch('device/fetchDevices', { force: true })
+        
+        // 获取完整的天气数据
+        await store.dispatch('weather/fetchWeather', { force: true })
+        
+        // 获取操作日志
+        await store.dispatch('operatelog/fetchOperateLogs', { force: true })
+        
+        // 过滤掉原始数据中的return value
+        const filterReturnValues = (data) => {
+          if (!data) return data
+          
+          if (Array.isArray(data)) {
+            return data.map(item => filterReturnValues(item))
+          }
+          
+          if (typeof data === 'object' && data !== null) {
+            const result = {}
+            for (const key in data) {
+              // 排除return value相关字段
+              if (key !== 'returnValue' && 
+                  key !== 'return_value' && 
+                  key !== 'return' && 
+                  !key.includes('returnValue')) {
+                result[key] = filterReturnValues(data[key])
+              }
+            }
+            return result
+          }
+          
+          return data
+        }
+        
+        // 准备过滤后的数据
+        const filteredDevices = filterReturnValues(deviceList.value)
+        const filteredWeather = filterReturnValues(weatherData.value)
+        const filteredLogs = filterReturnValues(operateLogs.value)
+        
+        // 格式化数据为文本，完整保留所有数据（除了return value）
+        const dataText = `# 智能家居数据导出 - ${new Date().toLocaleString('zh-CN')}
+        
+## 设备数据
+${JSON.stringify(filteredDevices, null, 2)}
+
+## 天气数据
+${JSON.stringify(filteredWeather, null, 2)}
+
+## 操作历史
+${JSON.stringify(filteredLogs, null, 2)}
+`
+        
+        // 直接上传到阿里云
+        loadingMessage.value = '正在上传文件至阿里云...'
+        
+        // 创建文件对象
+        const blob = new Blob([dataText], { type: 'text/plain' })
+        const fileName = `智能家居数据_${new Date().toISOString().slice(0, 10)}.txt`
+        const file = new File([blob], fileName, { type: 'text/plain' })
+        
+        // 导入上传API
+        const { uploadFile } = await import('@/api/upload')
+        
+        // 调用上传API（上传到阿里云）
+        const response = await uploadFile(file)
+        
+        // 处理上传结果
+        if (response.data && response.data.code === 1) {//code为1才表示成功
+          const fileUrl = response.data.data
+          
+          isLoading.value = false
+          
+          // 显示上传成功和下载链接 - 使用与系统匹配的风格
+          ElMessage({
+            dangerouslyUseHTMLString: true,
+            message: `
+              <div style="display: flex; align-items: center; padding: 8px 0;">
+                <i class="el-icon-success" style="color: #34A853; font-size: 24px; margin-right: 12px;"></i>
+                <div>
+                  <p style="margin: 0 0 8px; font-weight: 500; color: #333;">文件已上传成功！</p>
+                  <p style="margin: 0 0 8px; font-size: 14px; color: #666;">您可以通过以下链接访问：</p>
+                  <div style="background: #f5f7fa; border-radius: 4px; padding: 8px; margin-bottom: 8px; word-break: break-all;">
+                    <a href="${fileUrl}" target="_blank" style="color: #4285F4; text-decoration: none;">${fileUrl}</a>
+                  </div>
+                  <button id="copy-link-btn" class="el-button el-button--primary el-button--small">
+                    <i class="el-icon-document-copy" style="margin-right: 4px;"></i>复制链接
+                  </button>
+                </div>
+              </div>
+            `,
+            type: 'success',
+            duration: 0,
+            showClose: true,
+            customClass: 'modern-message-box',
+            center: false
+          })
+          
+          // 复制链接到剪贴板
+          const copyLink = () => {
+            const textarea = document.createElement('textarea')
+            textarea.value = fileUrl
+            document.body.appendChild(textarea)
+            textarea.select()
+            document.execCommand('copy')
+            document.body.removeChild(textarea)
+            ElMessage({
+              message: '链接已复制到剪贴板',
+              type: 'success',
+              customClass: 'modern-message',
+              offset: 60
+            })
+          }
+          
+          // 添加复制按钮事件
+          setTimeout(() => {
+            document.getElementById('copy-link-btn')?.addEventListener('click', copyLink)
+          }, 100)
+          
+          // 自动打开下载链接
+          setTimeout(() => {
+            window.open(fileUrl, '_blank')
+          }, 500)
+          
+        } else {
+          isLoading.value = false
+          ElMessage.error('文件上传失败: ' + (response.data?.msg || '未知错误'))
+        }
+      } catch (error) {
+        console.error('文件上传失败:', error)
+        ElMessage.error('文件上传失败: ' + (error.message || '未知错误'))
+        isLoading.value = false
+      }
+    }
+    
     // 开始探索
     const startExplore = () => {
       router.push('/chat')
     }
     
+    // 刷新天气数据
+    const refreshWeather = async () => {
+      try {
+        isLoading.value = true
+        loadingMessage.value = '正在刷新天气数据...'
+        await store.dispatch('weather/fetchWeather', { force: true })
+        isLoading.value = false
+        ElMessage.success('天气数据刷新成功！')
+      } catch (error) {
+        console.error('刷新天气数据失败:', error)
+        ElMessage.error('刷新天气数据失败: ' + (error.message || '未知错误'))
+        isLoading.value = false
+      }
+    }
+    
+    // 获取天气图标
+    const getWeatherIcon = (weatherCode) => {
+      // 确保weatherCode是字符串类型
+      const code = String(weatherCode || '').trim()
+      
+      // 如果是数字类型的编码(例如"00","01"等)，则映射到W格式
+      // 如果已经是W格式(例如"W0","W1"等)，则直接使用
+      let iconCode = code
+      
+      // 处理不同格式的天气编码
+      if (code && !code.startsWith('W')) {
+        // 尝试将编码转换为W格式
+        if (code === '00' || code === '0' || code === 'qing') {
+          iconCode = 'W0'  // 晴
+        } else if (code === '01' || code === '1' || code === 'duoyun') {
+          iconCode = 'W1'  // 多云
+        } else if (code === '02' || code === '2' || code === 'yin') {
+          iconCode = 'W2'  // 阴
+        } else if (code.includes('rain') || code.includes('yu')) {
+          iconCode = 'W7'  // 雨
+        } else if (code.includes('snow') || code.includes('xue')) {
+          iconCode = 'W14' // 雪
+        } else if (code.includes('fog') || code.includes('wu')) {
+          iconCode = 'W18' // 雾
+        } else {
+          // 默认图标
+          iconCode = 'W0'
+        }
+      }
+      
+      // 确保编码格式正确且添加W前缀
+      if (!iconCode.startsWith('W')) {
+        iconCode = `W${iconCode}`
+      }
+      
+      try {
+        // 使用require动态导入图标
+        return require(`@/assets/images/weather/${iconCode}.png`)
+      } catch (error) {
+        console.warn(`天气图标 ${iconCode}.png 不存在，使用默认图标`)
+        return require('@/assets/images/weather/W0.png') // 默认使用晴天图标
+      }
+    }
+    
     return {
       stats,
       tips,
-      startExplore
+      startExplore,
+      // AI建议相关
+      isLoading,
+      loadingMessage,
+      aiSuggestion,
+      hasCollectedData,
+      generateAiSuggestion,
+      downloadDataFile,
+      applySuggestion,
+      // 天气相关
+      weatherData,
+      isWeatherLoading,
+      refreshWeather,
+      getWeatherIcon
     }
   }
 }
@@ -202,6 +673,198 @@ export default {
 .stat-label {
   font-size: 14px;
   color: #666;
+}
+
+/* 天气卡片样式 */
+.weather-card {
+  margin-bottom: 20px;
+}
+
+.weather-loading,
+.weather-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 150px;
+  color: #666;
+  
+  i {
+    font-size: 24px;
+    margin-bottom: 10px;
+    color: #4285F4;
+  }
+}
+
+.weather-content {
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
+}
+
+.weather-current {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);
+  border-radius: 12px;
+  padding: 15px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+}
+
+.weather-icon {
+  width: 80px;
+  height: 80px;
+  margin-right: 20px;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.5));
+  }
+}
+
+.weather-info {
+  flex: 1;
+  
+  .city-name {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    
+    i {
+      margin-right: 5px;
+    }
+  }
+  
+  .temperature {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 5px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .weather-desc {
+    font-size: 16px;
+    opacity: 0.9;
+  }
+}
+
+.weather-details {
+  display: flex;
+  justify-content: space-around;
+  width: 100%;
+  margin-top: 10px;
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  padding: 15px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: #666;
+  
+  i {
+    font-size: 18px;
+    margin-right: 8px;
+    color: #4285F4;
+  }
+}
+
+/* AI建议卡片样式 */
+.ai-suggestion-card {
+  margin-bottom: 20px;
+}
+
+.ai-card-content {
+  display: flex;
+  align-items: stretch;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+}
+
+.ai-info {
+  flex: 1;
+  padding-right: 20px;
+  
+  i {
+    font-size: 40px;
+    color: #4285F4;
+    margin-bottom: 16px;
+  }
+  
+  h3 {
+    font-size: 20px;
+    color: #333;
+    margin-bottom: 12px;
+  }
+  
+  p {
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+}
+
+.ai-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.ai-status {
+  flex: 1;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 20px;
+  
+  @media (max-width: 768px) {
+    margin-top: 20px;
+  }
+}
+
+.loading-container {
+  text-align: center;
+  color: #666;
+  
+  i {
+    font-size: 24px;
+    color: #4285F4;
+    margin-right: 8px;
+  }
+  
+  span {
+    font-size: 16px;
+  }
+}
+
+.suggestion-container {
+  width: 100%;
+  
+  h4 {
+    font-size: 18px;
+    color: #4285F4;
+    margin-bottom: 12px;
+  }
+  
+  p {
+    color: #333;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    white-space: pre-line;
+  }
 }
 
 .carousel-content {

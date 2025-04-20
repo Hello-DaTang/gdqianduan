@@ -10,6 +10,27 @@ export function getAiResponse(prompt) {
   })
 }
 
+// 使用POST方法调用大模型获取智能回复
+export function postAiResponse(prompt) {
+  return request({
+    url: '/postchat',
+    method: 'post',
+    data: prompt
+  })
+}
+
+// 使用JSON模式调用大模型获取结构化JSON响应
+export function postAiResponseJsonMode(prompt) {
+  return request({
+    url: '/postchat/json',
+    method: 'post',
+    data: {
+      prompt: prompt,
+      json_mode: true   // 启用DeepSeek的JSON模式
+    }
+  })
+}
+
 // 调用流式大模型获取智能回复
 export function getChatStreamWithHistory(prompt, sessionID) {
   // 从auth.js获取token

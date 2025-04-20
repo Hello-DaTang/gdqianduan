@@ -360,11 +360,12 @@
 
 <script>
 import { ref, reactive, computed, onMounted } from 'vue'
+import { useStore } from 'vuex'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { detectDeviceType, getDefaultConfig } from '@/utils/deviceTypes'
 import ModernButton from '@/components/ui/ModernButton.vue'
 import ModernInput from '@/components/ui/ModernInput.vue'
-import { addHome, deleteHome, getAllHomes, updateHome } from '@/api/device'
+import { addHome, deleteHome } from '@/api/device'
 
 export default {
   name: 'DeviceView',
@@ -373,7 +374,7 @@ export default {
     ModernInput
   },
   setup() {
-    const devices = ref([])
+    const store = useStore()
     const loading = ref(false)
     const addDeviceDialogVisible = ref(false)
     const controlDeviceDialogVisible = ref(false)
@@ -383,6 +384,24 @@ export default {
     const activeTab = ref('all')
     const deviceFilter = ref('all')
     const adding = ref(false)
+    
+    // 从Vuex获取设备列表
+    const devices = computed(() => {
+      // 确保deviceList是数组
+      const deviceList = Array.isArray(store.state.device.deviceList) 
+        ? store.state.device.deviceList 
+        : (store.state.device.deviceList?.rows || []);
+      
+      // 从设备中获取并添加类型信息
+      return deviceList.map(device => {
+        // 检测设备类型
+        const type = detectDeviceType(device.deviceData)
+        return {
+          ...device,
+          type
+        }
+      })
+    })
     
     // 新设备表单
     const newDevice = reactive({
@@ -439,36 +458,18 @@ export default {
       { label: '厨房', value: 'kitchen' }
     ])
 
-    // 从后端获取设备列表
+    // 从Vuex获取设备列表
     const fetchDevices = async () => {
       loading.value = true
       try {
-
-        const response = await getAllHomes()
-
-        if (response.data && response.data.code === 1) {
-          const deviceList = response.data.data.rows || []
-          
-          // 处理设备数据，添加设备类型
-          devices.value = deviceList.map(device => {
-            // 检测设备类型
-            const type = detectDeviceType(device.deviceData)
-            return {
-              ...device,
-              type
-            }
-          })
-
-          // 动态生成位置选项，只显示用户当前拥有设备的位置
-          generateRoomOptions(deviceList)
-        } else {
-          ElMessage.warning('获取设备列表失败: ' + (response.data?.msg || '未知错误'))
-          devices.value = []
-        }
+        // 使用Vuex获取设备数据
+        await store.dispatch('device/fetchDevices', { force: true })
+        
+        // 动态生成位置选项，只显示用户当前拥有设备的位置
+        generateRoomOptions(devices.value)
       } catch (error) {
         console.error('获取设备列表出错:', error)
         ElMessage.error('获取设备列表失败')
-        devices.value = []
       } finally {
         loading.value = false
       }
@@ -641,35 +642,16 @@ export default {
     // 更新设备
     const updateDevice = async () => {
       try {
-        // 检查是否更改了位置
-        const locationChanged = currentDevice.value.location !== undefined;
+        // 使用Vuex更新设备
+        await store.dispatch('device/updateDevice', {
+          id: currentDevice.value.id,
+          homeName: currentDevice.value.homeName,
+          location: currentDevice.value.location,
+          deviceData: currentDevice.value.deviceData
+        })
         
-        const response = await updateHome(
-          {
-            id: currentDevice.value.id,
-            homeName: currentDevice.value.homeName,
-            location: currentDevice.value.location, // 使用location而非room字段
-            deviceData: currentDevice.value.deviceData
-          }
-        )
-
-        if (response.data && response.data.code === 1) {
-          ElMessage.success('设备更新成功')
-          controlDeviceDialogVisible.value = false
-          
-          // 更新本地设备列表中的数据
-          const index = devices.value.findIndex(d => d.id === currentDevice.value.id)
-          if (index !== -1) {
-            devices.value[index] = { ...currentDevice.value }
-          }
-          
-          // 如果更改了位置，重新获取设备列表以刷新位置选项
-          if (locationChanged) {
-            fetchDevices();
-          }
-        } else {
-          ElMessage.error('设备更新失败')
-        }
+        ElMessage.success('设备更新成功')
+        controlDeviceDialogVisible.value = false
       } catch (error) {
         console.error('更新设备出错:', error)
         ElMessage.error('更新设备请求失败')
@@ -695,8 +677,8 @@ export default {
 
         if (response.data && response.data.code === 1) {
           ElMessage.success('设备删除成功');
-          // 从列表中移除
-          devices.value = devices.value.filter(device => device.id !== id);
+          // 重新获取设备列表
+          fetchDevices();
         } else {
           ElMessage.error('设备删除失败: ' + (response.data?.msg || '未知错误'));
         }
@@ -738,6 +720,7 @@ export default {
       ElMessage.success('位置添加成功')
     }
 
+    // 组件挂载时获取设备列表
     onMounted(() => {
       fetchDevices()
     })

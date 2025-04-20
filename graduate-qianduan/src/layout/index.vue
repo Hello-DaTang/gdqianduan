@@ -117,11 +117,7 @@
         <!-- 内容区域 -->
         <div class="app-main">
           <router-view v-slot="{ Component }">
-            <transition name="fade-transform" mode="out-in">
-              <keep-alive>
-                <component :is="Component" />
-              </keep-alive>
-            </transition>
+            <component :is="Component" />
           </router-view>
         </div>
       </div>
