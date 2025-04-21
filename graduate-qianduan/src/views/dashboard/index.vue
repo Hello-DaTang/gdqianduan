@@ -113,6 +113,7 @@ import ModernCard from '@/components/layout/ModernCard.vue'
 import ModernButton from '@/components/ui/ModernButton.vue'
 import { postAiResponse } from '@/api/chat'
 import { parseDeviceInstructions } from '@/utils/deviceUtils'
+// eslint-disable-next-line no-unused-vars
 import { detectDeviceType } from '@/utils/deviceTypes'
 
 
@@ -218,35 +219,52 @@ export default {
     const generateAiSuggestion = async () => {
       try {
         isLoading.value = true
-        loadingMessage.value = '正在生成AI建议...'
+        loadingMessage.value = '正在准备数据...'
         
-        // 收集当前设备数据
+        // 获取完整的设备数据
         await store.dispatch('device/fetchDevices', { force: true })
         
-        // 收集天气数据
+        // 获取完整的天气数据
         await store.dispatch('weather/fetchWeather', { force: true })
         
-        // 收集操作日志
+        // 获取操作日志
         await store.dispatch('operatelog/fetchOperateLogs', { force: true })
         
-        // 构建精简的数据对象
+        // 过滤掉原始数据中的return value - 确保与文件导出使用相同的过滤逻辑
+        const filterReturnValues = (data) => {
+          if (!data) return data
+          
+          if (Array.isArray(data)) {
+            return data.map(item => filterReturnValues(item))
+          }
+          
+          if (typeof data === 'object' && data !== null) {
+            const result = {}
+            for (const key in data) {
+              // 排除return value相关字段
+              if (key !== 'returnValue' && 
+                  key !== 'return_value' && 
+                  key !== 'return' && 
+                  !key.includes('returnValue')) {
+                result[key] = filterReturnValues(data[key])
+              }
+            }
+            return result
+          }
+          
+          return data
+        }
+        
+        // 准备过滤后的数据 - 与txt文件导出的数据完全一致
+        const filteredDevices = filterReturnValues(deviceList.value)
+        const filteredWeather = filterReturnValues(weatherData.value)
+        const filteredLogs = filterReturnValues(operateLogs.value)
+        
+        // 构建与txt文件导出完全一致的数据
         const smartHomeData = {
-          devices: deviceList.value.map(device => ({
-            id: device.id,
-            homeName: device.homeName,
-            type: device.type || (device.deviceData ? detectDeviceType(device.deviceData) : 'unknown'),
-            location: device.location,
-            deviceData: device.deviceData
-          })),
-          
-          weather: {
-            city: store.state.weather.currentCity || '沈阳市',
-            current: weatherData.value?.current || {}
-          },
-          
-          operateLogs: Array.isArray(operateLogs.value) ? 
-            operateLogs.value.slice(0, 10) :
-            (operateLogs.value ? [operateLogs.value] : [])
+          devices: filteredDevices,
+          weather: filteredWeather,
+          operateLogs: filteredLogs
         }
         
         // 设置已收集标志
@@ -255,7 +273,7 @@ export default {
         
         loadingMessage.value = '正在生成AI建议...'
         
-        // 发送请求给AI
+        // 发送请求给AI - 使用与导出文件相同的数据
         const prompt = JSON.stringify(smartHomeData)
         console.log('发送的数据大小约为:', Math.round(prompt.length/1024), 'KB')
         
