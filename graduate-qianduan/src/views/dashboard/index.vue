@@ -281,7 +281,7 @@ export default {
         const aiResponse = await postAiResponse(prompt)
         
         // 处理AI响应
-        if (aiResponse.data && aiResponse.data.code === 0) {
+        if (aiResponse.data && aiResponse.data.code === 1) {
           try {
             // 因为后端返回严格的JSON格式，直接解析
             const jsonResponse = JSON.parse(aiResponse.data.data)
@@ -334,8 +334,7 @@ export default {
         isLoading.value = true
         loadingMessage.value = '正在应用AI建议...'
         
-        const instructions = aiDeviceInstructions.value.instructions
-        
+        const instructions = aiDeviceInstructions.value.instructions     
         // 确保指令包含设备数组
         if (!instructions.devices || !Array.isArray(instructions.devices) || instructions.devices.length === 0) {
           throw new Error('无效的设备控制指令格式')

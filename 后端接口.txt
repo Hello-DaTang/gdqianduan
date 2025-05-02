@@ -752,7 +752,7 @@ token:eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6I
 }
 
 
-11.user/update
+11.home/update
 put方法：http://127.0.0.1:8080/home/update
 Headers：
 token:eyJhbGciOiJIUzI1NiJ9.eyJuYW1lIjoi6JKL55qT54S2IiwiaWQiOjE5LCJ1c2VybmFtZSI6Ik1lZ3VtaX4iLCJleHAiOjE3NDM1MzM2NzB9.PBaJYReAD5GGfHaTupKDLJ86NdOYVNylHCy3guhgUn0
