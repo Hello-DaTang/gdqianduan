@@ -122,15 +122,15 @@ export default {
       // 根据设备类型获取设备图片
     getDeviceImage(type) {
       const images = {
-        'light': require('@/assets/images/device/灯光logo.png'),
-        'curtain': require('@/assets/images/device/窗帘logo.png'),
-        'airConditioner': require('@/assets/images/device/空调logo.png'),
-        'doorLock': require('@/assets/images/device/门锁logo.png'),
-        'tv': require('@/assets/images/device/灯光logo.png'), // 暂用灯光图标代替
-        'speaker': require('@/assets/images/device/灯光logo.png'), // 暂用灯光图标代替
-        'custom': require('@/assets/images/device/灯光logo.png') // 暂用灯光图标代替
+        'light': require('@/assets/images/device/灯.png'),
+        'curtain': require('@/assets/images/device/窗帘.png'),
+        'airConditioner': require('@/assets/images/device/空调.png'),
+        'doorLock': require('@/assets/images/device/门锁.png'),
+        'tv': require('@/assets/images/device/TV@3x.png'), 
+        'speaker': require('@/assets/images/device/音响.png'), 
+        'custom': require('@/assets/images/device/设备.png') 
       };
-      return images[type] || require('@/assets/images/device/灯光logo.png');
+      return images[type] || require('@/assets/images/device/设备.png');
     },
     
     // 获取开关状态的文本

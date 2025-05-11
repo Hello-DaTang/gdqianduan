@@ -541,37 +541,37 @@ export default {
       { 
         label: '灯光', 
         value: 'light', 
-        icon: require('@/assets/images/device/灯光logo.png') 
+        icon: require('@/assets/images/device/灯.png') 
       },
       { 
         label: '窗帘', 
         value: 'curtain', 
-        icon: require('@/assets/images/device/窗帘logo.png')
+        icon: require('@/assets/images/device/窗帘.png')
       },
       { 
         label: '空调', 
         value: 'airConditioner', 
-        icon: require('@/assets/images/device/空调logo.png')
+        icon: require('@/assets/images/device/空调.png')
       },
       { 
         label: '门锁', 
         value: 'doorLock', 
-        icon: require('@/assets/images/device/门锁logo.png')
+        icon: require('@/assets/images/device/门锁.png')
       },
       { 
         label: '电视', 
         value: 'tv', 
-        icon: require('@/assets/images/device/空调logo.png') // 使用现有图标
+        icon: require('@/assets/images/device/TV@3x.png') // 使用现有图标
       },
       { 
         label: '音箱', 
         value: 'speaker', 
-        icon: require('@/assets/images/device/灯光logo.png') // 使用现有图标
+        icon: require('@/assets/images/device/音响.png') // 使用现有图标
       },
       { 
         label: '自定义设备', 
         value: 'custom', 
-        icon: require('@/assets/images/device/灯光logo.png') // 使用现有图标
+        icon: require('@/assets/images/device/设备.png') // 使用现有图标
       }
     ]
 
@@ -660,15 +660,15 @@ export default {
     }// 根据设备类型获取图片
     const getDeviceImage = (type) => {
       const images = {
-        light: require('@/assets/images/device/灯光logo.png'),
-        curtain: require('@/assets/images/device/窗帘logo.png'),
-        airConditioner: require('@/assets/images/device/空调logo.png'),
-        doorLock: require('@/assets/images/device/门锁logo.png'),
-        tv: require('@/assets/images/device/灯光logo.png'), // 暂用灯光图标代替
-        speaker: require('@/assets/images/device/灯光logo.png'), // 暂用灯光图标代替
-        custom: require('@/assets/images/device/灯光logo.png') // 暂用灯光图标代替
+        light: require('@/assets/images/device/灯.png'),
+        curtain: require('@/assets/images/device/窗帘.png'),
+        airConditioner: require('@/assets/images/device/空调.png'),
+        doorLock: require('@/assets/images/device/门锁.png'),
+        tv: require('@/assets/images/device/TV@3x.png'), // 暂用灯光图标代替
+        speaker: require('@/assets/images/device/音响.png'), // 暂用灯光图标代替
+        custom: require('@/assets/images/device/设备.png') // 暂用灯光图标代替
       }
-      return images[type] || require('@/assets/images/device/灯光logo.png') // 默认使用灯光图标
+      return images[type] || require('@/assets/images/device/设备.png') // 默认使用灯光图标
     }
     
     // 获取特定状态的设备数量

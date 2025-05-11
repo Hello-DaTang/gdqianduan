@@ -97,10 +97,9 @@
         </div>
       </div>
     </modern-card>
-    
-    <!-- 轮播图部分 -->
-    <modern-card title="智能家居提示">
-      <el-carousel height="200px">
+      <!-- 轮播图部分 -->
+    <modern-card title="系统功能介绍">
+      <el-carousel height="400px">
         <el-carousel-item v-for="(tip, index) in tips" :key="index">
           <div class="carousel-content" :style="{ backgroundImage: `url(${tip.image})` }">
             <div class="carousel-overlay">
@@ -151,23 +150,32 @@ export default {
     })
     const aiDeviceInstructions = ref(null)
     const userPreference = ref('')
-    
-    // 轮播提示数据
+      // 轮播提示数据
     const tips = reactive([
       {
-        title: '季节变化，温度调节',
-        description: '随着季节变化，记得调整您的中央空调温度，以获得最佳舒适度和节能效果。',
-        image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
+        title: '多设备智能控制',
+        description: '一站式管理多种智能设备，包括灯光、窗帘、空调、门锁、电视和音箱等，随时随地掌控您的智能家居。',
+        image: require('@/assets/images/carousel/多设备智能控制.png')
       },
       {
-        title: '定时关灯省电',
-        description: '设置灯光定时关闭功能，避免不必要的能源浪费，延长灯具使用寿命。',
-        image: 'https://images.unsplash.com/photo-1564515963606-d01fd5901c82?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
+        title: '能源监控与节能',
+        description: '实时监控各设备功率和用电量，智能分析节能表现，为您打造经济环保的智能家居环境。',
+        image: require('@/assets/images/carousel/能源监控与节能.png')
       },
       {
-        title: '智能家居语音控制',
-        description: '通过语音助手控制您的设备，免去复杂的操作，让家居生活更简单。',
-        image: 'https://images.unsplash.com/photo-1558002038-1055907df827?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80'
+        title: '智能定时控制',
+        description: '为每个设备设置精确的定时控制方案，自动化您的日常生活，提升家居舒适度和便捷性。',
+        image: require('@/assets/images/carousel/智能定时控制.png')
+      },
+      {
+        title: '自定义设备管理',
+        description: '支持自定义设备类型和功率设置，轻松扩展系统功能，适应各种智能家居场景需求。',
+        image: require('@/assets/images/carousel/自定义设备管理.png')
+      },
+      {
+        title: '房间位置管理',
+        description: '按房间分类管理设备，直观展示各区域设备状态，让家居管理更加条理分明。',
+        image: require('@/assets/images/carousel/房间位置管理.png')
       }
     ])
     
@@ -701,10 +709,13 @@ ${JSON.stringify(filteredLogs, null, 2)}
       } catch (error) {
         // 使用默认图标
         const typeIconMap = {
-          'light': require('@/assets/images/device/灯光logo.png'),
-          'curtain': require('@/assets/images/device/窗帘logo.png'),
-          'airconditioner': require('@/assets/images/device/空调logo.png'),
-          'doorlock': require('@/assets/images/device/门锁logo.png')
+          'light': require('@/assets/images/device/灯.png'),
+          'curtain': require('@/assets/images/device/窗帘.png'),
+          'airConditioner': require('@/assets/images/device/空调.png'),
+          'doorLock': require('@/assets/images/device/门锁.png'),
+          'tv': require('@/assets/images/device/TV@3x.png'), 
+          'speaker': require('@/assets/images/device/音响.png'), 
+          'custom': require('@/assets/images/device/设备.png') 
         }
         return typeIconMap[type] || typeIconMap.light
       }
