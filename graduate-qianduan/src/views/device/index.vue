@@ -166,8 +166,7 @@
               style="width: 100%;"
             />
           </el-form-item>
-          
-          <el-form-item label="设备类型">
+            <el-form-item label="设备类型">
             <div class="device-type-grid">
               <div 
                 v-for="option in deviceOptions" 
@@ -180,8 +179,27 @@
               </div>
             </div>
           </el-form-item>
-
-          <el-form-item label="位置">
+          
+          <!-- 自定义设备类型的额外字段 -->
+          <div v-if="newDevice.type === 'custom'">
+            <el-form-item label="自定义设备类型名称">
+              <modern-input 
+                v-model="newDevice.customTypeName" 
+                placeholder="例如：智能咖啡机"
+                prefix-icon="el-icon-edit"
+                style="width: 100%;"
+              />
+            </el-form-item>
+            
+            <el-form-item label="设备功率(W)">
+              <el-input-number 
+                v-model="newDevice.customPower" 
+                :min="1" 
+                :max="5000"
+                style="width: 100%;" 
+              />
+            </el-form-item>
+          </div><el-form-item label="位置">
             <el-select v-model="newDevice.room" placeholder="请选择设备位置" style="width: 100%">
               <el-option
                 v-for="room in roomOptions"
@@ -194,8 +212,49 @@
                   <span>{{ room.label }}</span>
                 </div>
               </el-option>
+              <el-divider content-position="center">或</el-divider>
+              <el-option
+                key="add-new-room"
+                value="add-new-room"
+                label="+ 添加新位置"
+              >
+                <div class="room-option add-new">
+                  <i class="el-icon-plus"></i>
+                  <span>添加新位置</span>
+                </div>
+              </el-option>
             </el-select>
           </el-form-item>
+          
+          <!-- 当选择"添加新位置"时显示的表单 -->
+          <div v-if="newDevice.room === 'add-new-room'">
+            <el-form-item label="位置名称" >
+              <modern-input
+                v-model="newRoomInline.name"
+                placeholder="请输入位置名称，例如：书房"
+                prefix-icon="el-icon-office-building"
+                style="width: 100%;"
+              />
+            </el-form-item>
+            
+            <el-form-item label="位置标识" class="small-text">
+              <modern-input
+                v-model="newRoomInline.value"
+                placeholder="位置唯一标识，如：study"
+                prefix-icon="el-icon-key"
+                style="width: 100%;"
+              />
+              <div class="tip-text">提示：标识只能包含英文字母、数字和下划线</div>
+            </el-form-item>
+            
+            <el-form-item>
+              <el-button type="primary" size="small" @click="addRoomInline" 
+                         :disabled="!newRoomInline.name || !newRoomInline.value">确认添加位置</el-button>
+              <el-button size="small" @click="newDevice.room = roomOptions.length ? roomOptions[0].value : ''">
+                取消
+              </el-button>
+            </el-form-item>
+          </div>
         </el-form>
         
         <div class="dialog-preview">
@@ -284,8 +343,7 @@
                 @click="currentDevice.deviceData.color = color.value"
               ></div>
             </div>
-          </div>
-        </template>
+          </div>        </template>
         
         <!-- 窗帘控制 -->
         <template v-if="currentDevice.type === 'curtain' && currentDevice.deviceData">
@@ -302,6 +360,60 @@
             </div>
           </div>
         </template>
+        
+        <!-- 空调控制 -->
+        <template v-if="currentDevice.type === 'airConditioner' && currentDevice.deviceData">
+          <div class="control-section">
+            <div class="control-label">温度</div>
+            <div class="control-slider">
+              <el-slider 
+                v-model="currentDevice.deviceData.temperature" 
+                :min="16" 
+                :max="30"
+                :disabled="currentDevice.deviceData.status === 'off'"
+              />
+              <div class="slider-value">{{ currentDevice.deviceData.temperature }}°C</div>
+            </div>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-label">模式</div>
+            <el-select v-model="currentDevice.deviceData.mode" style="width: 100%;">
+              <el-option label="制冷" value="cool" />
+              <el-option label="制热" value="heat" />
+              <el-option label="自动" value="auto" />
+              <el-option label="送风" value="fan" />
+            </el-select>
+          </div>
+          
+          <div class="control-section">
+            <div class="control-label">风速</div>
+            <el-select v-model="currentDevice.deviceData.fanSpeed" style="width: 100%;">
+              <el-option label="自动" value="auto" />
+              <el-option label="低速" value="low" />
+              <el-option label="中速" value="medium" />
+              <el-option label="高速" value="high" />
+            </el-select>
+          </div>
+        </template>
+        
+        <!-- 设备功率显示（所有设备都有） -->
+        <div class="control-section">
+          <div class="control-label">设备功率</div>
+          <div class="power-display">
+            <span class="power-value">{{ currentDevice.deviceData.power || 0 }} W</span>
+            <span class="power-hint">（设备固有属性）</span>
+          </div>
+        </div>
+          <!-- 定时功能（所有设备都有） -->
+        <div class="control-section">
+          <timer-control 
+            :value="currentDevice.deviceData.timer"
+            @update:value="val => currentDevice.deviceData.timer = val"
+            :device-type="currentDevice.type"
+            label="定时控制"
+          />
+        </div>
       </div>
       <template #footer>
         <span class="dialog-footer">
@@ -365,13 +477,15 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { detectDeviceType, getDefaultConfig } from '@/utils/deviceTypes'
 import ModernButton from '@/components/ui/ModernButton.vue'
 import ModernInput from '@/components/ui/ModernInput.vue'
+import TimerControl from '@/components/devices/TimerControl.vue'
 import { addHome, deleteHome } from '@/api/device'
 
 export default {
   name: 'DeviceView',
   components: {
     ModernButton,
-    ModernInput
+    ModernInput,
+    TimerControl
   },
   setup() {
     const store = useStore()
@@ -401,13 +515,13 @@ export default {
           type
         }
       })
-    })
-    
-    // 新设备表单
+    })    // 新设备表单
     const newDevice = reactive({
       homeName: '',
       type: 'light',
       room: '',
+      customTypeName: '',  // 自定义设备类型名称
+      customPower: 50,     // 自定义设备功率
       deviceData: {}
     })
 
@@ -416,8 +530,13 @@ export default {
       name: '',
       value: ''
     })
-
-    // 设备类型选项
+    
+    // 内联添加新位置的表单
+    const newRoomInline = reactive({
+      name: '',
+      value: ''
+    })
+   // 设备类型选项
     const deviceOptions = [
       { 
         label: '灯光', 
@@ -438,6 +557,21 @@ export default {
         label: '门锁', 
         value: 'doorLock', 
         icon: require('@/assets/images/device/门锁logo.png')
+      },
+      { 
+        label: '电视', 
+        value: 'tv', 
+        icon: require('@/assets/images/device/空调logo.png') // 使用现有图标
+      },
+      { 
+        label: '音箱', 
+        value: 'speaker', 
+        icon: require('@/assets/images/device/灯光logo.png') // 使用现有图标
+      },
+      { 
+        label: '自定义设备', 
+        value: 'custom', 
+        icon: require('@/assets/images/device/灯光logo.png') // 使用现有图标
       }
     ]
 
@@ -511,26 +645,28 @@ export default {
       if (newDevice.room === '' && roomOptions.length > 0) {
         newDevice.room = roomOptions[0].value;
       }
-    }
-
-    // 根据设备类型获取图标
+    }    // 根据设备类型获取图标
     const getDeviceIcon = (type) => {
       const icons = {
         light: 'el-icon-lightbulb',
         curtain: 'el-icon-picture-outline-round',
         airConditioner: 'el-icon-cold-drink',
-        doorLock: 'el-icon-lock'
+        doorLock: 'el-icon-lock',
+        tv: 'el-icon-video-play',
+        speaker: 'el-icon-microphone',
+        custom: 'el-icon-setting'
       }
       return icons[type] || 'el-icon-s-platform'
-    }
-
-    // 根据设备类型获取图片
+    }// 根据设备类型获取图片
     const getDeviceImage = (type) => {
       const images = {
         light: require('@/assets/images/device/灯光logo.png'),
         curtain: require('@/assets/images/device/窗帘logo.png'),
         airConditioner: require('@/assets/images/device/空调logo.png'),
-        doorLock: require('@/assets/images/device/门锁logo.png')
+        doorLock: require('@/assets/images/device/门锁logo.png'),
+        tv: require('@/assets/images/device/灯光logo.png'), // 暂用灯光图标代替
+        speaker: require('@/assets/images/device/灯光logo.png'), // 暂用灯光图标代替
+        custom: require('@/assets/images/device/灯光logo.png') // 暂用灯光图标代替
       }
       return images[type] || require('@/assets/images/device/灯光logo.png') // 默认使用灯光图标
     }
@@ -579,14 +715,14 @@ export default {
       }
       
       return result
-    })
-
-    // 显示添加设备对话框
+    })    // 显示添加设备对话框
     const showAddDeviceDialog = () => {
       // 重置表单
       newDevice.homeName = ''
       newDevice.type = 'light'
-      newDevice.room = ''
+      newDevice.room = roomOptions.length > 0 ? roomOptions[0].value : ''
+      newDevice.customTypeName = ''
+      newDevice.customPower = 50
       // 显示对话框
       addDeviceDialogVisible.value = true
     }
@@ -602,13 +738,33 @@ export default {
       try {
         adding.value = true;
         
-        // 根据设备类型获取默认配置
-        const defaultConfig = getDefaultConfig(newDevice.type);
-        if (!defaultConfig) {
-          ElMessage.error('不支持的设备类型');
-          return;
-        }
+        let defaultConfig;
         
+        // 处理自定义设备类型
+        if (newDevice.type === 'custom') {
+          if (!newDevice.customTypeName) {
+            ElMessage.warning('请输入自定义设备类型名称');
+            adding.value = false;
+            return;
+          }
+          
+          // 为自定义设备创建配置
+          defaultConfig = {
+            status: 'off',
+            customName: newDevice.customTypeName,
+            customType: 'custom',
+            power: newDevice.customPower || 50,
+            timer: null
+          };
+        } else {
+          // 根据设备类型获取默认配置
+          defaultConfig = getDefaultConfig(newDevice.type);
+          if (!defaultConfig) {
+            ElMessage.error('不支持的设备类型');
+            adding.value = false;
+            return;
+          }
+        }        
         const response = await addHome(
           {
             homeName: newDevice.homeName,
@@ -703,9 +859,7 @@ export default {
       newRoom.name = ''
       newRoom.value = ''
       addRoomDialogVisible.value = true
-    }
-
-    // 添加房间
+    }    // 添加房间
     const addRoom = () => {
       if (!newRoom.name || !newRoom.value) {
         ElMessage.warning('请输入位置名称和标识')
@@ -718,6 +872,40 @@ export default {
       roomOptions.push({ label: newRoom.name, value: newRoom.value })
       addRoomDialogVisible.value = false
       ElMessage.success('位置添加成功')
+    }
+    
+    // 内联添加位置（在添加设备对话框内）
+    const addRoomInline = () => {
+      if (!newRoomInline.name || !newRoomInline.value) {
+        ElMessage.warning('请输入位置名称和标识')
+        return
+      }
+      if (!/^[a-zA-Z0-9_]+$/.test(newRoomInline.value)) {
+        ElMessage.warning('位置标识只能包含英文字母、数字和下划线')
+        return
+      }
+      
+      // 检查是否已存在相同的位置标识
+      const existingRoom = roomOptions.find(room => room.value === newRoomInline.value)
+      if (existingRoom) {
+        ElMessage.warning(`位置标识 "${newRoomInline.value}" 已存在`)
+        return
+      }
+      
+      // 添加新位置到位置选项
+      roomOptions.push({ 
+        label: newRoomInline.name, 
+        value: newRoomInline.value 
+      })
+      
+      // 设置新设备的位置为新添加的位置
+      newDevice.room = newRoomInline.value
+      
+      // 重置内联位置表单
+      newRoomInline.name = ''
+      newRoomInline.value = ''
+      
+      ElMessage.success('新位置添加成功')
     }
 
     // 组件挂载时获取设备列表
@@ -748,12 +936,13 @@ export default {
       addDevice,
       controlDevice,
       updateDevice,
-      deleteDevice,
-      filterDevices,
+      deleteDevice,      filterDevices,
       showAddRoomDialog,
       addRoom,
+      addRoomInline,
       adding,
-      getLocationLabel
+      getLocationLabel,
+      newRoomInline
     }
   }
 }
@@ -930,9 +1119,6 @@ export default {
   font-size: 18px;
   color: white;
   transition: all 0.3s;
-}
-
-.add-room-button:hover i {
 }
 
 .room-option {
@@ -1141,6 +1327,26 @@ room-option i {
 .color-circle.active {
   border-color: #4285F4;
   box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.3);
+}
+
+.power-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.power-value {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+}
+
+.power-hint {
+  font-size: 12px;
+  color: #909399;
 }
 
 /* Tab样式定制 */

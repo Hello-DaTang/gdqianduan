@@ -23,11 +23,10 @@
     
     <!-- 状态概览部分 -->
     <div class="status-section">
-      <div class="status-grid">
-        <modern-card v-for="(stat, index) in stats" :key="index" hoverable>
+      <div class="status-grid">        <modern-card v-for="(stat, index) in stats" :key="index" hoverable>
           <div class="stat-content">
-            <div class="stat-icon" :style="{ backgroundColor: stat.color }">
-              <i :class="stat.icon"></i>
+            <div class="stat-icon">
+              <img :src="stat.image" alt="状态图标">
             </div>
             <div class="stat-info">
               <div class="stat-value">{{ stat.value }}</div>
@@ -83,6 +82,18 @@
               style="margin-top: 16px;"
             ></modern-button>
           </div>
+
+          <div v-else class="preference-input-container">
+            <h4>输入您的偏好</h4>
+            <p class="input-desc">告诉AI您的需求，如"我想享受更多的阳光"、"我想节省能源"等</p>
+            <el-input
+              v-model="userPreference"
+              type="textarea"
+              :rows="4"
+              placeholder="请输入您的偏好或需求..."
+              class="preference-textarea"
+            ></el-input>
+          </div>
         </div>
       </div>
     </modern-card>
@@ -107,7 +118,7 @@
 import { computed, onMounted, ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from 'vuex'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import ModernPageContainer from '@/components/layout/ModernPageContainer.vue'
 import ModernCard from '@/components/layout/ModernCard.vue'
 import ModernButton from '@/components/ui/ModernButton.vue'
@@ -139,6 +150,7 @@ export default {
       operateLogs: []
     })
     const aiDeviceInstructions = ref(null)
+    const userPreference = ref('')
     
     // 轮播提示数据
     const tips = reactive([
@@ -167,32 +179,27 @@ export default {
         : (store.state.device.deviceList?.rows || [])
       return list
     })
-    
-    // 根据真实设备数据计算统计卡片内容
+      // 根据真实设备数据计算统计卡片内容
     const stats = computed(() => [
       { 
         label: '连接设备', 
-        value: deviceList.value.filter(device => device.deviceData?.status === 'on').length.toString(), 
-        icon: 'el-icon-connection', 
-        color: '#4285F4' 
+        value: deviceList.value.filter(device => device.deviceData?.status === 'on').length.toString(),
+        image: require('@/assets/images/dashboard/连接设备logo.png')
       },
       { 
         label: '离线设备', 
-        value: deviceList.value.filter(device => device.deviceData?.status === 'off').length.toString(), 
-        icon: 'el-icon-warning', 
-        color: '#EA4335' 
+        value: deviceList.value.filter(device => device.deviceData?.status === 'off').length.toString(),
+        image: require('@/assets/images/dashboard/离线设备logo.png')
       },
       { 
         label: '今日用电量', 
-        value: '9.6 kWh', // 这个值可能需要从其他API获取
-        icon: 'el-icon-lightning', 
-        color: '#FBBC05' 
+        value: calculatePowerConsumption(), // 使用计算方法
+        image: require('@/assets/images/dashboard/今日用电logo.png')
       },
       { 
         label: '节能表现', 
-        value: '良好', // 这个值可能需要从其他API获取或根据其他数据计算
-        icon: 'el-icon-success', 
-        color: '#34A853' 
+        value: evaluateEnergySaving(), // 使用评估方法
+        image: require('@/assets/images/dashboard/节能表现logo.png')
       }
     ])
     
@@ -264,7 +271,8 @@ export default {
         const smartHomeData = {
           devices: filteredDevices,
           weather: filteredWeather,
-          operateLogs: filteredLogs
+          operateLogs: filteredLogs,
+          userPreference: userPreference.value // 添加用户偏好
         }
         
         // 设置已收集标志
@@ -340,6 +348,16 @@ export default {
           throw new Error('无效的设备控制指令格式')
         }
         
+        // 记录设备变更详情
+        const deviceChanges = []
+        
+        // 获取当前设备状态
+        const currentDevices = JSON.parse(JSON.stringify(deviceList.value))
+        const currentDeviceMap = {}
+        currentDevices.forEach(device => {
+          currentDeviceMap[device.id] = device
+        })
+        
         // 应用每个设备的更新
         for (const device of instructions.devices) {
           if (!device.id || !device.deviceData) {
@@ -347,17 +365,41 @@ export default {
             continue
           }
           
+          // 获取当前设备状态
+          const currentDevice = currentDeviceMap[device.id]
+          if (!currentDevice) {
+            console.warn(`找不到ID为${device.id}的设备`)
+            continue
+          }
+          
+          // 记录变更
+          const change = {
+            id: device.id,
+            name: currentDevice.homeName || currentDevice.name || `设备${device.id}`, // 优先使用homeName
+            type: currentDevice.type || 'unknown',
+            before: JSON.parse(JSON.stringify(currentDevice.deviceData || {})),
+            after: JSON.parse(JSON.stringify(device.deviceData || {}))
+          }
+          
+          deviceChanges.push(change)
+          
           // 更新设备
           await store.dispatch('device/updateDevice', {
             id: device.id,
             deviceData: device.deviceData
           })
           
-          console.log(`成功更新设备 ${device.id}:`, device.deviceData)
+          console.log(`成功更新设备 ${currentDevice.homeName || currentDevice.name || device.id}:`, device.deviceData)
         }
         
         // 更新成功后刷新设备列表
         await store.dispatch('device/fetchDevices', { force: true })
+        
+        // 显示设备变更详情对话框
+        showDeviceChangesDialog(deviceChanges, userPreference.value)
+        
+        // 清空用户偏好
+        userPreference.value = ''
         
         ElMessage.success('AI建议已成功应用到设备')
         isLoading.value = false
@@ -578,6 +620,291 @@ ${JSON.stringify(filteredLogs, null, 2)}
       }
     }
     
+    // 显示设备变更详情对话框
+    const showDeviceChangesDialog = (deviceChanges, userPreference) => {
+      if (!deviceChanges || deviceChanges.length === 0) {
+        ElMessage.warning('没有设备发生变化')
+        return
+      }
+      
+      // 格式化设备变更详情为HTML
+      let changesHTML = `
+        <div class="device-changes-dialog">
+          <div class="dialog-header">
+            <i class="el-icon-magic-stick" style="font-size: 24px; color: #4285F4; margin-right: 10px;"></i>
+            <h3 style="margin: 0; color: #333;">AI建议已应用</h3>
+          </div>
+          ${userPreference ? `<div class="user-preference">
+            <span style="font-weight: bold;">您的偏好：</span>${userPreference}
+          </div>` : ''}
+          <div class="changes-summary">
+            <p>共修改了 <span style="font-weight: bold; color: #4285F4;">${deviceChanges.length}</span> 个设备</p>
+          </div>
+          <ul class="device-list">
+      `
+      
+      // 添加每个设备的变更详情
+      deviceChanges.forEach(change => {
+        const deviceTypeName = getDeviceTypeName(change.type)
+        const deviceIcon = getDeviceTypeIcon(change.type)
+        
+        // 生成设备状态变化描述
+        const stateChanges = getStateChangesDescription(change.before, change.after)
+        
+        changesHTML += `
+          <li class="device-item">
+            <div class="device-header">
+              <img src="${deviceIcon}" class="device-icon" style="width: 32px; height: 32px; margin-right: 10px; border-radius: 4px;">
+              <span class="device-name" style="font-weight: bold; color: #333;">${change.name}</span>
+              <span class="device-type" style="color: #666; margin-left: 8px;">(${deviceTypeName})</span>
+            </div>
+            <div class="state-changes">
+              ${stateChanges}
+            </div>
+          </li>
+        `
+      })
+      
+      changesHTML += `
+          </ul>
+        </div>
+      `
+      
+      // 使用Element Plus的消息框显示变更详情
+      ElMessageBox({
+        title: 'AI建议已成功应用',
+        dangerouslyUseHTMLString: true,
+        message: changesHTML,
+        showCancelButton: false,
+        confirmButtonText: '确定',
+        center: false,
+        customClass: 'device-changes-message-box'
+      })
+    }
+    
+    // 获取设备类型名称
+    const getDeviceTypeName = (type) => {
+      const typeMap = {
+        'light': '智能灯',
+        'curtain': '智能窗帘',
+        'airconditioner': '智能空调',
+        'doorlock': '智能门锁',
+        'default': '智能设备'
+      }
+      return typeMap[type] || typeMap.default
+    }
+    
+    // 获取设备类型图标
+    const getDeviceTypeIcon = (type) => {
+      try {
+        return require(`@/assets/images/device/${type}logo.png`)
+      } catch (error) {
+        // 使用默认图标
+        const typeIconMap = {
+          'light': require('@/assets/images/device/灯光logo.png'),
+          'curtain': require('@/assets/images/device/窗帘logo.png'),
+          'airconditioner': require('@/assets/images/device/空调logo.png'),
+          'doorlock': require('@/assets/images/device/门锁logo.png')
+        }
+        return typeIconMap[type] || typeIconMap.light
+      }
+    }
+    
+    // 获取状态变化描述
+    const getStateChangesDescription = (before, after) => {
+      let changes = ''
+      
+      if (!before || !after) {
+        return '<span class="no-changes">无法比较设备状态变化</span>'
+      }
+      
+      // 公共状态处理
+      if (before.status !== after.status) {
+        const statusText = {
+          'on': '开启',
+          'off': '关闭'
+        }
+        changes += `
+          <div class="state-item">
+            <span class="state-name">状态</span>
+            <span class="state-from">${statusText[before.status] || before.status}</span>
+            <span class="state-arrow">→</span>
+            <span class="state-to">${statusText[after.status] || after.status}</span>
+          </div>
+        `
+      }
+      
+      // 根据设备类型处理不同属性
+      if (before.type === 'light' || after.type === 'light') {
+        // 灯光亮度
+        if (before.brightness !== after.brightness) {
+          changes += `
+            <div class="state-item">
+              <span class="state-name">亮度</span>
+              <span class="state-from">${before.brightness || 0}%</span>
+              <span class="state-arrow">→</span>
+              <span class="state-to">${after.brightness || 0}%</span>
+            </div>
+          `
+        }
+        
+        // 灯光颜色
+        if (before.color !== after.color) {
+          changes += `
+            <div class="state-item">
+              <span class="state-name">颜色</span>
+              <span class="state-from">${before.color || '默认'}</span>
+              <span class="state-arrow">→</span>
+              <span class="state-to">${after.color || '默认'}</span>
+            </div>
+          `
+        }
+      }
+      
+      // 窗帘开度
+      if ((before.type === 'curtain' || after.type === 'curtain') && 
+          before.openPercentage !== after.openPercentage) {
+        changes += `
+          <div class="state-item">
+            <span class="state-name">开合度</span>
+            <span class="state-from">${before.openPercentage || 0}%</span>
+            <span class="state-arrow">→</span>
+            <span class="state-to">${after.openPercentage || 0}%</span>
+          </div>
+        `
+      }
+      
+      // 空调温度
+      if ((before.type === 'airconditioner' || after.type === 'airconditioner') && 
+          before.temperature !== after.temperature) {
+        changes += `
+          <div class="state-item">
+            <span class="state-name">温度</span>
+            <span class="state-from">${before.temperature || 0}°C</span>
+            <span class="state-arrow">→</span>
+            <span class="state-to">${after.temperature || 0}°C</span>
+          </div>
+        `
+      }
+      
+      // 空调模式
+      if ((before.type === 'airconditioner' || after.type === 'airconditioner') && 
+          before.mode !== after.mode) {
+        const modeText = {
+          'cool': '制冷',
+          'heat': '制热',
+          'fan': '送风',
+          'auto': '自动',
+          'dry': '除湿'
+        }
+        changes += `
+          <div class="state-item">
+            <span class="state-name">模式</span>
+            <span class="state-from">${modeText[before.mode] || before.mode || '默认'}</span>
+            <span class="state-arrow">→</span>
+            <span class="state-to">${modeText[after.mode] || after.mode || '默认'}</span>
+          </div>
+        `
+      }
+      
+      // 门锁状态
+      if ((before.type === 'doorlock' || after.type === 'doorlock') && 
+          before.locked !== after.locked) {
+        changes += `
+          <div class="state-item">
+            <span class="state-name">门锁状态</span>
+            <span class="state-from">${before.locked ? '已锁定' : '已解锁'}</span>
+            <span class="state-arrow">→</span>
+            <span class="state-to">${after.locked ? '已锁定' : '已解锁'}</span>
+          </div>
+        `
+      }
+      
+      // 处理任何其他属性变化（通用）
+      const allKeys = new Set([...Object.keys(before), ...Object.keys(after)])
+      allKeys.forEach(key => {
+        // 排除已处理的特定属性
+        if (['status', 'type', 'brightness', 'color', 'openPercentage', 
+             'temperature', 'mode', 'locked'].includes(key)) {
+          return
+        }
+        
+        // 检查属性是否发生变化
+        if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
+          changes += `
+            <div class="state-item">
+              <span class="state-name">${key}</span>
+              <span class="state-from">${JSON.stringify(before[key])}</span>
+              <span class="state-arrow">→</span>
+              <span class="state-to">${JSON.stringify(after[key])}</span>
+            </div>
+          `
+        }
+      })
+      
+      return changes || '<span class="no-changes">设备状态未发生变化</span>'
+    }
+    
+    // 计算今日用电量（根据设备功率和使用时间估算）
+    const calculatePowerConsumption = () => {
+      if (!deviceList.value || deviceList.value.length === 0) {
+        return '0.0 kWh';
+      }
+      
+      // 获取所有在线设备
+      const onlineDevices = deviceList.value.filter(device => device.deviceData?.status === 'on');
+      
+      let totalPowerConsumption = 0;
+      
+      // 计算每个设备的用电量
+      onlineDevices.forEach(device => {
+        // 获取设备功率，如果没有设置默认为50W
+        const power = device.deviceData?.power || 50; // 单位：瓦特
+        
+        // 假设每个设备平均已开启8小时
+        const hoursOn = 8;
+        
+        // 计算该设备的用电量（千瓦时）
+        const deviceConsumption = (power * hoursOn) / 1000;
+        
+        totalPowerConsumption += deviceConsumption;
+      });
+      
+      // 格式化为两位小数
+      return totalPowerConsumption.toFixed(1) + ' kWh';
+    }
+    
+    // 评估节能表现
+    const evaluateEnergySaving = () => {
+      if (!deviceList.value || deviceList.value.length === 0) {
+        return '良好';
+      }
+      
+      // 获取所有设备
+      const allDevices = deviceList.value;
+      const onlineDevices = allDevices.filter(device => device.deviceData?.status === 'on');
+      
+      // 计算开启设备的百分比
+      const onlineRatio = onlineDevices.length / allDevices.length;
+      
+      // 计算总功率
+      let totalPower = 0;
+      onlineDevices.forEach(device => {
+        totalPower += device.deviceData?.power || 50;
+      });
+      
+      // 评估节能表现
+      if (onlineRatio < 0.3 && totalPower < 500) {
+        return '优秀';
+      } else if (onlineRatio < 0.5 && totalPower < 1000) {
+        return '良好';
+      } else if (onlineRatio < 0.7 && totalPower < 2000) {
+        return '一般';
+      } else {
+        return '需改进';
+      }
+    }
+    
     return {
       stats,
       tips,
@@ -594,7 +921,8 @@ ${JSON.stringify(filteredLogs, null, 2)}
       weatherData,
       isWeatherLoading,
       refreshWeather,
-      getWeatherIcon
+      getWeatherIcon,
+      userPreference
     }
   }
 }
@@ -669,10 +997,12 @@ ${JSON.stringify(filteredLogs, null, 2)}
   align-items: center;
   justify-content: center;
   margin-right: 15px;
+  overflow: hidden;
   
-  i {
-    font-size: 30px;
-    color: white;
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 }
 
@@ -884,6 +1214,25 @@ ${JSON.stringify(filteredLogs, null, 2)}
   }
 }
 
+.preference-input-container {
+  width: 100%;
+  
+  h4 {
+    font-size: 18px;
+    color: #4285F4;
+    margin-bottom: 12px;
+  }
+  
+  .input-desc {
+    color: #666;
+    margin-bottom: 8px;
+  }
+  
+  .preference-textarea {
+    width: 100%;
+  }
+}
+
 .carousel-content {
   height: 100%;
   background-size: cover;
@@ -924,5 +1273,96 @@ ${JSON.stringify(filteredLogs, null, 2)}
     padding-right: 0;
     margin-bottom: 20px;
   }
+}
+
+/* 设备变更对话框样式 */
+:deep(.device-changes-message-box) {
+  max-width: 600px;
+  width: 90%;
+}
+
+:deep(.device-changes-dialog) {
+  font-family: 'PingFang SC', 'Helvetica Neue', Helvetica, 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+}
+
+:deep(.dialog-header) {
+  display: flex;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+:deep(.user-preference) {
+  background-color: #f5f7fa;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  font-size: 14px;
+}
+
+:deep(.changes-summary) {
+  margin-bottom: 15px;
+  font-size: 15px;
+}
+
+:deep(.device-list) {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+:deep(.device-item) {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 12px;
+}
+
+:deep(.device-header) {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+:deep(.state-changes) {
+  border-top: 1px dashed #e0e0e0;
+  padding-top: 10px;
+}
+
+:deep(.state-item) {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+:deep(.state-name) {
+  font-weight: bold;
+  width: 80px;
+  color: #555;
+}
+
+:deep(.state-from) {
+  color: #999;
+  flex: 1;
+}
+
+:deep(.state-arrow) {
+  margin: 0 10px;
+  color: #4285F4;
+  font-weight: bold;
+}
+
+:deep(.state-to) {
+  flex: 1;
+  color: #4285F4;
+  font-weight: bold;
+}
+
+:deep(.no-changes) {
+  color: #999;
+  font-style: italic;
+  font-size: 14px;
 }
 </style>

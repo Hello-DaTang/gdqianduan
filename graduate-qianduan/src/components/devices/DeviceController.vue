@@ -119,14 +119,16 @@ export default {
       this.formData = { ...this.device.deviceData };
       this.location = this.device.location || '';
     },
-    
-    // 根据设备类型获取设备图片
+      // 根据设备类型获取设备图片
     getDeviceImage(type) {
       const images = {
         'light': require('@/assets/images/device/灯光logo.png'),
         'curtain': require('@/assets/images/device/窗帘logo.png'),
         'airConditioner': require('@/assets/images/device/空调logo.png'),
-        'doorLock': require('@/assets/images/device/门锁logo.png')
+        'doorLock': require('@/assets/images/device/门锁logo.png'),
+        'tv': require('@/assets/images/device/灯光logo.png'), // 暂用灯光图标代替
+        'speaker': require('@/assets/images/device/灯光logo.png'), // 暂用灯光图标代替
+        'custom': require('@/assets/images/device/灯光logo.png') // 暂用灯光图标代替
       };
       return images[type] || require('@/assets/images/device/灯光logo.png');
     },
