@@ -277,11 +277,10 @@
       title="设备控制" 
       width="400px"
       destroy-on-close
-    >
-      <div v-if="currentDevice" class="device-control">
+    >      <div v-if="currentDevice" class="device-control">
         <div class="device-control-header">
           <div class="device-control-icon">
-            <i :class="getDeviceIcon(currentDevice.type)"></i>
+            <img :src="getDeviceImage(currentDevice.type)" alt="设备图片" class="device-control-img" />
           </div>
           <h3>{{ currentDevice.homeName }}</h3>
         </div>
@@ -787,11 +786,17 @@ export default {
       } finally {
         adding.value = false;
       }
-    }
-
-    // 控制设备
+    }    // 控制设备
     const controlDevice = (device) => {
+      // 深拷贝设备对象
       currentDevice.value = JSON.parse(JSON.stringify(device))
+      
+      // 确保设备类型信息存在
+      if (!currentDevice.value.type) {
+        currentDevice.value.type = detectDeviceType(currentDevice.value.deviceData)
+        console.log('设备类型已检测:', currentDevice.value.type)
+      }
+      
       controlDeviceDialogVisible.value = true
     }
 
@@ -1258,13 +1263,18 @@ room-option i {
   width: 50px;
   height: 50px;
   border-radius: 10px;
-  background: #f0f4f9;
+  background: #f5f7fa; /* 卡片背景颜色 */
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: #4285F4;
+  justify-content: center; /* 居中显示 */
   margin-right: 15px;
+  overflow: hidden; /* 防止图像溢出 */
+}
+
+.device-control-img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain; /* 保持图像比例 */
 }
 
 .device-control-header h3 {

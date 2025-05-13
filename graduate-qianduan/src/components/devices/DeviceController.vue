@@ -1,6 +1,5 @@
-<template>
-  <div class="device-controller">
-    <el-form label-position="top" :model="formData">
+<template>  <div class="device-controller">
+    <el-form label-position="top" :model="formData">      
       <div class="controller-header">
         <div class="device-image">
           <img :src="getDeviceImage(deviceType)" alt="设备图片" />
@@ -118,19 +117,45 @@ export default {
     initFormData() {
       this.formData = { ...this.device.deviceData };
       this.location = this.device.location || '';
-    },
-      // 根据设备类型获取设备图片
+    },    // 根据设备类型获取设备图片
     getDeviceImage(type) {
+      // 确保type有值
+      if (!type) {
+        console.warn('设备类型未定义，使用默认图像');
+        return require('@/assets/images/device/设备.png');
+      }
+      
+      // 记录设备类型用于调试
+      console.log('当前设备类型:', type);
+      
+      // 标准化类型名称
+      const normalizedType = type.toLowerCase();
+      
       const images = {
         'light': require('@/assets/images/device/灯.png'),
         'curtain': require('@/assets/images/device/窗帘.png'),
-        'airConditioner': require('@/assets/images/device/空调.png'),
-        'doorLock': require('@/assets/images/device/门锁.png'),
+        'airconditioner': require('@/assets/images/device/空调.png'),
+        'airConditioner': require('@/assets/images/device/空调.png'), // 兼容驼峰式命名
+        'doorlock': require('@/assets/images/device/门锁.png'),
+        'doorLock': require('@/assets/images/device/门锁.png'), // 兼容驼峰式命名
         'tv': require('@/assets/images/device/TV@3x.png'), 
         'speaker': require('@/assets/images/device/音响.png'), 
         'custom': require('@/assets/images/device/设备.png') 
       };
-      return images[type] || require('@/assets/images/device/设备.png');
+      
+      // 直接查找
+      if (images[type]) {
+        return images[type];
+      }
+      
+      // 尝试标准化后的类型名称
+      if (images[normalizedType]) {
+        return images[normalizedType];
+      }
+      
+      // 默认图片
+      console.warn(`未找到设备类型 ${type} 的图像，使用默认图像`);
+      return require('@/assets/images/device/设备.png');
     },
     
     // 获取开关状态的文本
@@ -215,8 +240,7 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.device-controller {
-  padding: 20px;
+.device-controller {  padding: 20px;
 }
 
 .controller-header {
@@ -230,10 +254,10 @@ export default {
   width: 80px;
   height: 80px;
   border-radius: 12px;
-  background: #f5f7fa;
+  background: #f5f7fa; /* 卡片背景颜色 */
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: center; /* 居中显示 */
   margin-bottom: 15px;
   
   img {
