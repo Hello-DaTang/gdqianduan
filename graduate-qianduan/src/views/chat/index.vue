@@ -7,14 +7,18 @@
         <div class="wave wave3"></div>
       </div>
       
-      <div class="chat-container">
-        <div class="chat-layout">
-          <!-- 左侧边栏 -->
-          <div class="chat-sidebar">
-            <div class="sidebar-header">
-              <div class="logo-container">
-                <img src="@/assets/images/login/logo.png" alt="Logo" class="mini-logo">
-                <h2>智能助手</h2>
+      <!-- 使用各个数据提供者组件 -->
+      <device-data-provider ref="deviceProviderRef">
+        <weather-data-provider ref="weatherProviderRef">
+          <log-data-provider ref="logProviderRef">
+            <div class="chat-container">
+              <div class="chat-layout">
+                <!-- 左侧边栏 -->
+                <div class="chat-sidebar">
+                  <div class="sidebar-header">
+                    <div class="logo-container">
+                      <img src="@/assets/images/login/logo.png" alt="Logo" class="mini-logo">
+                      <h2>智能助手</h2>
               </div>
               <el-button type="primary" class="new-chat-btn" size="small" @click="startNewChat">
                 <i class="el-icon-plus"></i>
@@ -113,19 +117,18 @@
                     </div>
                   </div>
                   
-                  <div class="message-content">
-                    <div class="message-header">
+                  <div class="message-content">                    <div class="message-header">
                       <span class="message-sender">{{ message.type === 'user' ? '您' : '智能助手' }}</span>
                       <span class="message-time">{{ message.time }}</span>
                     </div>
                     <div class="message-body">
-                      <div v-if="message.type === 'assistant' && message.content" v-html="formatMarkdown(message.content)"></div>
+                      <div v-if="message.type === 'assistant'" v-html="getFormattedContent(message)"></div>
                       <div v-else>{{ message.content }}</div>
                     </div>
                     
                     <div v-if="message.type === 'assistant'" class="message-actions">
-                      <el-button type="text" size="small" icon="el-icon-copy-document">复制</el-button>
-                      <el-button type="text" size="small" icon="el-icon-refresh">重新生成</el-button>
+                      <el-button type="text" size="small" icon="el-icon-copy-document" @click="copyMessageContent(message.content)">复制</el-button>
+                      <el-button type="text" size="small" icon="el-icon-refresh" @click="regenerateResponse(message)" :disabled="loading">重新生成</el-button>
                     </div>
                   </div>
                 </div>
@@ -164,26 +167,38 @@
               
               <div class="input-info">
                 <span>Shift + Enter 换行</span>
-              </div>
-            </div>
+              </div>            </div>
+          </div>            </div>
           </div>
-        </div>
-      </div>
-    </div>
-  </template>
-  
+        </log-data-provider>
+      </weather-data-provider>
+    </device-data-provider>
+  </div>
+</template>  
   <script>
-  // 保持原有的script部分不变
-  import { ref, computed, nextTick, onMounted ,onBeforeUnmount} from 'vue'
+  import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
   import { getChatStreamWithHistory } from '@/api/chat'
   import { ElMessage } from 'element-plus'
+  import DeviceDataProvider from '@/components/data/DeviceDataProvider.vue'
+  import WeatherDataProvider from '@/components/data/WeatherDataProvider.vue'
+  import LogDataProvider from '@/components/data/LogDataProvider.vue'
+  
   export default {
     name: 'ChatView',
-    setup() {
+    components: {
+      DeviceDataProvider,
+      WeatherDataProvider,
+      LogDataProvider
+    },    setup() {
       const userInput = ref('')
       const loading = ref(false)
       const chatMessagesRef = ref(null)
       const currentChatIndex = ref(0)
+      
+      // 引用数据提供者组件
+      const deviceProviderRef = ref(null)
+      const weatherProviderRef = ref(null)
+      const logProviderRef = ref(null)
       
       // 添加会话ID和当前流连接变量
       const sessionID = ref('')
@@ -232,8 +247,20 @@
           .replace(/\*(.*)\*/gm, '<em>$1</em>')
           .replace(/- (.*)/gm, '<li>$1</li>')
           .replace(/\n/gm, '<br />')
+      }      
+      // 消息内容，支持Markdown格式化
+      const getFormattedContent = (message) => {
+        // 检查消息是否为对象且有内容
+        if (!message || !message.content) return ''
+        
+        // 如果是助手消息，格式化为Markdown
+        if (message.type === 'assistant') {
+          return formatMarkdown(message.content)
+        }
+        
+        // 用户消息保持原样
+        return message.content
       }
-  
       // 修改发送消息方法，使用流式接口
       const sendMessage = async () => {
         if (!userInput.value.trim() || loading.value) return
@@ -277,25 +304,83 @@
             currentStreamConnection.close()
             currentStreamConnection = null
           }
+
+          // 准备上下文数据
+          const contextData = {}
+          
+          // 获取设备数据
+          if (deviceProviderRef.value && deviceProviderRef.value.fetchDevices) {
+            try {
+              const deviceData = await deviceProviderRef.value.fetchDevices()
+              if (deviceData && deviceData.length > 0) {
+                contextData.devices = deviceData
+                console.log('已收集设备数据:', deviceData.length)
+              }
+            } catch (error) {
+              console.error('获取设备数据失败:', error)
+              ElMessage.warning('设备数据获取失败，可能影响智能助手的设备控制功能')
+            }
+          }
+          
+          // 获取天气数据
+          if (weatherProviderRef.value && weatherProviderRef.value.fetchWeather) {
+            try {
+              const weatherData = await weatherProviderRef.value.fetchWeather()
+              if (weatherData) {
+                contextData.weather = weatherData
+                console.log('已收集天气数据')
+              }
+            } catch (error) {
+              console.error('获取天气数据失败:', error)
+              ElMessage.warning('天气数据获取失败，可能影响智能助手的天气查询功能')
+            }
+          }
+            // 获取操作日志数据
+          if (logProviderRef.value && logProviderRef.value.fetchLogs) {
+            try {
+              const logData = await logProviderRef.value.fetchLogs()
+              // 确保日志数据是有效的数组
+              if (logData && Array.isArray(logData) && logData.length > 0) {
+                contextData.operateLogs = logData
+                console.log('已收集操作日志数据:', logData.length)
+              } else {
+                console.log('操作日志数据为空或非数组，跳过添加到上下文')
+              }
+            } catch (error) {
+              console.error('获取操作日志数据失败:', error)
+              ElMessage.warning('操作日志获取失败，可能影响智能助手的操作记录查询功能')
+            }
+          }
           
           // 获取最后添加的消息的引用
           const lastMessageIndex = chatHistory.value[currentChatIndex.value].messages.length - 1
           let responseContent = ''
           
-          // 建立新的流式连接
-          currentStreamConnection = getChatStreamWithHistory(currentInput, sessionID.value)
+          // 打印上下文数据大小，检查是否过大
+          const contextSize = JSON.stringify(contextData).length
+          console.log(`上下文数据大小: ${contextSize} 字节`)
+          
+          // 如果上下文过大，可以进行优化，例如限制操作日志条数
+          if (contextSize > 1000000) { // 大于1MB
+            console.warn('上下文数据过大，正在优化...')
+            if (contextData.operateLogs && contextData.operateLogs.length > 20) {
+              contextData.operateLogs = contextData.operateLogs.slice(0, 20)
+            }
+          }
+          
+          // 建立新的流式连接，传入上下文数据
+          currentStreamConnection = getChatStreamWithHistory(currentInput, sessionID.value, contextData)
           
           // 开始获取流数据
           currentStreamConnection.fetch(
             // onMessage 回调
             (data) => {
-              console.log('收到消息数据:', data) // 添加此行查看接收到的数据
+              console.log('收到消息数据片段') // 避免记录可能太大的数据
               // 累积内容
               responseContent += data
               
               // 更新聊天消息内容
               chatHistory.value[currentChatIndex.value].messages[lastMessageIndex].content = responseContent
-              console.log('更新后的内容:', responseContent.length) // 添加长度检查
               
               // 滚动到底部
               nextTick(scrollToBottom)
@@ -308,7 +393,8 @@
               // 如果没有内容返回，添加错误消息
               if (!responseContent) {
                 chatHistory.value[currentChatIndex.value].messages[lastMessageIndex].content = 
-                  '很抱歉，我遇到了问题，无法回复您的问题。'
+                  '很抱歉，我遇到了问题，无法回复您的问题。请检查网络连接或稍后再试。'
+                ElMessage.error('连接服务器失败，请检查网络')
               }
             },
             // onComplete 回调
@@ -316,6 +402,16 @@
               console.log('流式响应完成')
               loading.value = false
               currentStreamConnection = null
+              
+              // 如果响应内容为空，说明出现了问题
+              if (!responseContent.trim()) {
+                chatHistory.value[currentChatIndex.value].messages[lastMessageIndex].content = 
+                  '很抱歉，我没有收到有效的回复。请稍后再试。'
+                ElMessage.warning('未收到有效回复')
+              }
+              
+              // 保存聊天历史到本地存储
+              saveChatsToLocalStorage()
             }
           )
         } catch (error) {
@@ -323,10 +419,47 @@
           const lastMessage = chatHistory.value[currentChatIndex.value].messages[
             chatHistory.value[currentChatIndex.value].messages.length - 1
           ]
-          lastMessage.content = '很抱歉，我遇到了问题，无法回复您的问题。'
+          lastMessage.content = '很抱歉，我遇到了问题，无法回复您的问题。请检查网络连接或稍后再试。'
           loading.value = false
+          ElMessage.error(error.message || '发送消息失败')
         }
         
+      }
+
+      // 保存聊天历史到本地存储
+      const saveChatsToLocalStorage = () => {
+        try {
+          // 限制历史记录条数，避免存储过大
+          const historyToSave = chatHistory.value.slice(0, 20).map(chat => {
+            // 对于每个聊天，限制消息数量
+            const limitedMessages = chat.messages.slice(-50) // 只保留最新的50条消息
+            return {
+              ...chat,
+              messages: limitedMessages
+            }
+          })
+          localStorage.setItem('chatHistory', JSON.stringify(historyToSave))
+        } catch (error) {
+          console.error('保存聊天历史失败:', error)
+        }
+      }
+
+      // 从本地存储加载聊天历史
+      const loadChatsFromLocalStorage = () => {
+        try {
+          const saved = localStorage.getItem('chatHistory')
+          if (saved) {
+            const parsed = JSON.parse(saved)
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              chatHistory.value = parsed
+              return true
+            }
+          }
+          return false
+        } catch (error) {
+          console.error('加载聊天历史失败:', error)
+          return false
+        }
       }
 
       // 开始新对话时重置会话ID
@@ -359,7 +492,15 @@
       
       // 选择聊天
       const selectChat = (index) => {
+        // 关闭当前流连接
+        if (currentStreamConnection) {
+          currentStreamConnection.close()
+          currentStreamConnection = null
+        }
+        
         currentChatIndex.value = index
+        // 切换对话时，重置会话ID，使每个对话有独立的会话上下文
+        sessionID.value = `chat-${chatHistory.value[index].id}-${Date.now()}`
       }
       
       // 删除聊天
@@ -369,20 +510,84 @@
           return
         }
         
+        // 如果删除当前对话，需要切换到其他对话
+        const isCurrentChat = index === currentChatIndex.value
+        
+        // 移除对话
         chatHistory.value.splice(index, 1)
         
-        // 如果删除的是当前聊天，则选择第一个聊天
-        if (index === currentChatIndex.value) {
+        // 如果删除的是当前对话，切换到第一个对话
+        if (isCurrentChat) {
           currentChatIndex.value = 0
-        } else if (index < currentChatIndex.value) {
-          // 如果删除的是当前聊天之前的聊天，则当前聊天索引减1
+        } 
+        // 如果删除的对话索引小于当前对话索引，需要调整当前索引
+        else if (index < currentChatIndex.value) {
           currentChatIndex.value--
         }
+        
+        // 保存更改到本地存储
+        saveChatsToLocalStorage()
       }
       
       // 使用示例问题
-      const useExample = (example) => {
-        userInput.value = example
+      const useExample = (text) => {
+        userInput.value = text
+        nextTick(() => {
+          sendMessage()
+        })
+      }
+
+      // 复制消息内容到剪贴板
+      const copyMessageContent = (content) => {
+        if (!content) return
+        
+        // 创建一个不可见的textarea元素
+        const textarea = document.createElement('textarea')
+        textarea.value = content
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        document.body.appendChild(textarea)
+        
+        // 选择文本并复制
+        textarea.select()
+        document.execCommand('copy')
+        
+        // 移除临时元素
+        document.body.removeChild(textarea)
+        
+        // 显示成功提示
+        ElMessage.success('已复制到剪贴板')
+      }
+        // 重新生成响应
+      const regenerateResponse = async () => {
+        // 获取当前对话的用户最后一条消息
+        const messages = currentChat.value.messages
+        let lastUserMessageIndex = -1
+        
+        // 从最后一条消息向前查找最近的用户消息
+        for (let i = messages.length - 1; i >= 0; i--) {
+          if (messages[i].type === 'user') {
+            lastUserMessageIndex = i
+            break
+          }
+        }
+        
+        // 如果找不到用户消息，无法重新生成
+        if (lastUserMessageIndex === -1) {
+          ElMessage.warning('没有找到用户消息，无法重新生成')
+          return
+        }
+        
+        // 获取用户消息内容
+        const userMessageContent = messages[lastUserMessageIndex].content
+        
+        // 删除当前对话中该用户消息后的所有消息
+        chatHistory.value[currentChatIndex.value].messages = 
+          chatHistory.value[currentChatIndex.value].messages.slice(0, lastUserMessageIndex + 1)
+        
+        // 重新设置用户输入并发送
+        userInput.value = userMessageContent
+        await nextTick()
         sendMessage()
       }
 
@@ -393,24 +598,75 @@
           currentStreamConnection = null
         }
       })
-      
+
+      // 添加组件生命周期钩子
       onMounted(() => {
-        scrollToBottom()
+        // 尝试从本地存储加载聊天历史
+        const loaded = loadChatsFromLocalStorage()
+        
+        // 如果没有历史或加载失败，创建一个默认对话
+        if (!loaded) {
+          chatHistory.value = [
+            {
+              id: Date.now(),
+              title: '新对话',
+              time: formatTime(new Date()),
+              messages: [
+                { 
+                  type: 'assistant', 
+                  content: '您好！我是您的智能家居助手。我可以帮您控制家中的设备，查询天气，或者回答您关于家居的问题。请问有什么可以帮您的吗？',
+                  time: formatTime(new Date())
+                }
+              ]
+            }
+          ]
+        }
+        
+        // 为当前对话创建会话ID
+        if (currentChat.value && !sessionID.value) {
+          sessionID.value = `chat-${currentChat.value.id}-${Date.now()}`
+        }
+        
+        // 滚动到底部
+        nextTick(scrollToBottom)
+        
+        // 添加窗口大小变化监听，确保滚动条始终在底部
+        window.addEventListener('resize', scrollToBottom)
+      })
+      
+      onBeforeUnmount(() => {
+        // 关闭流连接
+        if (currentStreamConnection) {
+          currentStreamConnection.close()
+          currentStreamConnection = null
+        }
+        
+        // 保存聊天历史到本地存储
+        saveChatsToLocalStorage()
+        
+        // 移除事件监听
+        window.removeEventListener('resize', scrollToBottom)
       })
   
       return {
         userInput,
         loading,
-        chatHistory,
-        currentChatIndex,
-        currentChat,
         chatMessagesRef,
-        formatMarkdown,
+        currentChatIndex,
+        chatHistory,
+        currentChat,
         sendMessage,
         startNewChat,
         selectChat,
         deleteChat,
-        useExample
+        useExample,
+        formatMarkdown,
+        getFormattedContent,
+        copyMessageContent,
+        regenerateResponse,
+        deviceProviderRef,
+        weatherProviderRef,
+        logProviderRef
       }
     }
   }
@@ -1048,8 +1304,7 @@
     transform: translateY(-2px) !important;
     box-shadow: 0 6px 15px rgba(66, 133, 244, 0.4) !important;
   }
-  
-  .send-button:active {
+    .send-button:active {
     transform: translateY(0) !important;
   }
   

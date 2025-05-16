@@ -1,6 +1,8 @@
 <template>
   <div class="device-container">
-    <!-- 顶部统计卡片 -->
+    <!-- 使用DataProvider组件包裹内容 -->
+    <data-provider ref="dataProviderRef">
+      <!-- 顶部统计卡片 -->
     <el-row :gutter="20">
       <el-col :xs="12" :md="6">
         <div class="stat-box" @click="filterDevices('all')" :class="{ active: deviceFilter === 'all' }">
@@ -466,6 +468,7 @@
         </div>
       </div>
     </el-dialog>
+    </data-provider>
   </div>
 </template>
 

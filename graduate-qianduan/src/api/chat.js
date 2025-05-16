@@ -32,7 +32,7 @@ export function postAiResponseJsonMode(prompt) {
 }
 
 // 调用流式大模型获取智能回复
-export function getChatStreamWithHistory(prompt, sessionID) {
+export function getChatStreamWithHistory(prompt, sessionID, contextData = null) {
   // 从auth.js获取token
   const token = getToken()
   
@@ -43,13 +43,27 @@ export function getChatStreamWithHistory(prompt, sessionID) {
   // 使用fetch API替代EventSource
   const fetchStream = async (onMessage, onError, onComplete) => {
     try {
+      // 准备请求体数据
+      const requestBody = {
+        prompt: prompt,
+        sessionID: sessionID || ''
+      }
+      
+      // 如果有上下文数据，添加到请求中
+      if (contextData) {
+        Object.assign(requestBody, contextData)
+      }
+      
       const response = await fetch(
-        `http://localhost:8080/chatStream/history?prompt=${encodeURIComponent(prompt)}&sessionID=${encodeURIComponent(sessionID || '')}`, 
+        `http://localhost:8080/chatStream/history`, 
         {
+          method: 'POST',
           headers: {
             'token': token || '',
-            'Accept': 'text/event-stream'
+            'Accept': 'text/event-stream',
+            'Content-Type': 'application/json'
           },
+          body: JSON.stringify(requestBody),
           signal
         }
       )

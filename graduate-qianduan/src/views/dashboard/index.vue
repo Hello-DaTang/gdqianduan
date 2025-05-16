@@ -1,6 +1,8 @@
 <template>
   <modern-page-container title="智能家居控制中心">
-    <div class="welcome-section">
+    <!-- 使用DataProvider组件包裹内容 -->
+    <data-provider ref="dataProviderRef">
+      <div class="welcome-section">
       <modern-card hoverable>
         <div class="welcome-content">
           <div class="welcome-text">
@@ -96,8 +98,7 @@
           </div>
         </div>
       </div>
-    </modern-card>
-      <!-- 轮播图部分 -->
+    </modern-card>      <!-- 轮播图部分 -->
     <modern-card title="系统功能介绍">
       <el-carousel height="400px">
         <el-carousel-item v-for="(tip, index) in tips" :key="index">
@@ -110,6 +111,7 @@
         </el-carousel-item>
       </el-carousel>
     </modern-card>
+    </data-provider>
   </modern-page-container>
 </template>
 
@@ -121,6 +123,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import ModernPageContainer from '@/components/layout/ModernPageContainer.vue'
 import ModernCard from '@/components/layout/ModernCard.vue'
 import ModernButton from '@/components/ui/ModernButton.vue'
+import DataProvider from '@/components/common/DataProvider.vue'
 import { postAiResponse } from '@/api/chat'
 import { parseDeviceInstructions } from '@/utils/deviceUtils'
 // eslint-disable-next-line no-unused-vars
@@ -132,11 +135,12 @@ export default {
   components: {
     ModernPageContainer,
     ModernCard,
-    ModernButton
-  },
-  setup() {
+    ModernButton,
+    DataProvider
+  },  setup() {
     const router = useRouter()
     const store = useStore()
+    const dataProviderRef = ref(null)
     
     // 状态变量
     const isLoading = ref(false)
@@ -214,73 +218,80 @@ export default {
     const weatherData = computed(() => store.state.weather.weatherData)
     const operateLogs = computed(() => store.state.operatelog.operateLogs)
     const isWeatherLoading = computed(() => store.state.weather.loading)
-    
-    // 在组件挂载时预加载数据
+      // 在组件挂载时预加载数据 - 如果使用DataProvider，则不需要这个加载过程
     onMounted(async () => {
-      try {
-        // 并行加载所有数据
-        await Promise.all([
-          store.dispatch('device/fetchDevices'),
-          store.dispatch('weather/fetchWeather'),
-          store.dispatch('operatelog/fetchOperateLogs')
-        ])
-      } catch (error) {
-        console.error('预加载数据失败:', error)
-      }
+      // DataProvider组件会自动加载数据
     })
     
-    
-    // 生成AI建议
+      // 生成AI建议
     const generateAiSuggestion = async () => {
       try {
         isLoading.value = true
         loadingMessage.value = '正在准备数据...'
         
-        // 获取完整的设备数据
-        await store.dispatch('device/fetchDevices', { force: true })
+        let smartHomeData = null
         
-        // 获取完整的天气数据
-        await store.dispatch('weather/fetchWeather', { force: true })
-        
-        // 获取操作日志
-        await store.dispatch('operatelog/fetchOperateLogs', { force: true })
-        
-        // 过滤掉原始数据中的return value - 确保与文件导出使用相同的过滤逻辑
-        const filterReturnValues = (data) => {
-          if (!data) return data
-          
-          if (Array.isArray(data)) {
-            return data.map(item => filterReturnValues(item))
+        // 使用DataProvider组件获取数据
+        if (dataProviderRef.value) {
+          try {
+            smartHomeData = await dataProviderRef.value.getChatContextData(true)
+            // 添加用户偏好
+            smartHomeData.userPreference = userPreference.value
+          } catch (dataError) {
+            console.error('获取数据失败:', dataError)
+            // 退回到原始方法
+            smartHomeData = null
           }
-          
-          if (typeof data === 'object' && data !== null) {
-            const result = {}
-            for (const key in data) {
-              // 排除return value相关字段
-              if (key !== 'returnValue' && 
-                  key !== 'return_value' && 
-                  key !== 'return' && 
-                  !key.includes('returnValue')) {
-                result[key] = filterReturnValues(data[key])
-              }
-            }
-            return result
-          }
-          
-          return data
         }
         
-        // 准备过滤后的数据 - 与txt文件导出的数据完全一致
-        const filteredDevices = filterReturnValues(deviceList.value)
-        const filteredWeather = filterReturnValues(weatherData.value)
-        const filteredLogs = filterReturnValues(operateLogs.value)
-        
-        // 构建与txt文件导出完全一致的数据
-        const smartHomeData = {
-          devices: filteredDevices,
-          weather: filteredWeather,
-          operateLogs: filteredLogs,
-          userPreference: userPreference.value // 添加用户偏好
+        // 如果使用DataProvider获取数据失败，使用原始方法
+        if (!smartHomeData) {
+          // 获取完整的设备数据
+          await store.dispatch('device/fetchDevices', { force: true })
+          
+          // 获取完整的天气数据
+          await store.dispatch('weather/fetchWeather', { force: true })
+          
+          // 获取操作日志
+          await store.dispatch('operatelog/fetchOperateLogs', { force: true })
+          
+          // 过滤掉原始数据中的return value - 确保与文件导出使用相同的过滤逻辑
+          const filterReturnValues = (data) => {
+            if (!data) return data
+            
+            if (Array.isArray(data)) {
+              return data.map(item => filterReturnValues(item))
+            }
+            
+            if (typeof data === 'object' && data !== null) {
+              const result = {}
+              for (const key in data) {
+                // 排除return value相关字段
+                if (key !== 'returnValue' && 
+                    key !== 'return_value' && 
+                    key !== 'return' && 
+                    !key.includes('returnValue')) {
+                  result[key] = filterReturnValues(data[key])
+                }
+              }
+              return result
+            }
+            
+            return data
+          }
+          
+          // 准备过滤后的数据 - 与txt文件导出的数据完全一致
+          const filteredDevices = filterReturnValues(deviceList.value)
+          const filteredWeather = filterReturnValues(weatherData.value)
+          const filteredLogs = filterReturnValues(operateLogs.value)
+          
+          // 构建与txt文件导出完全一致的数据
+          smartHomeData = {
+            devices: filteredDevices,
+            weather: filteredWeather,
+            operateLogs: filteredLogs,
+            userPreference: userPreference.value // 添加用户偏好
+          }
         }
         
         // 设置已收集标志
@@ -915,25 +926,26 @@ ${JSON.stringify(filteredLogs, null, 2)}
         return '需改进';
       }
     }
-    
-    return {
-      stats,
+      return {
       tips,
-      startExplore,
-      // AI建议相关
+      stats,
+      deviceList,
+      weatherData,
+      operateLogs,
       isLoading,
+      isWeatherLoading,
       loadingMessage,
       aiSuggestion,
-      hasCollectedData,
-      generateAiSuggestion,
       downloadDataFile,
-      applySuggestion,
-      // 天气相关
-      weatherData,
-      isWeatherLoading,
+      generateAiSuggestion,
       refreshWeather,
       getWeatherIcon,
-      userPreference
+      applySuggestion,
+      collectedData,
+      hasCollectedData,
+      userPreference,
+      dataProviderRef,
+      startExplore
     }
   }
 }
