@@ -609,8 +609,7 @@ export default {
     }
 
     // 动态生成位置选项，只显示用户当前拥有设备的位置
-    const generateRoomOptions = (deviceList) => {
-      // 先清空当前位置选项
+    const generateRoomOptions = (deviceList) => {    // 先清空当前位置选项
       roomOptions.splice(0, roomOptions.length);
       
       // 收集所有设备的位置
@@ -623,14 +622,28 @@ export default {
         }
       });
       
+      // 从localStorage获取自定义位置映射
+      let customLocationMapping = {};
+      try {
+        const savedMapping = localStorage.getItem('customLocationMapping');
+        if (savedMapping) {
+          customLocationMapping = JSON.parse(savedMapping);
+        }
+      } catch (error) {
+        console.error('读取自定义位置映射失败:', error);
+      }
+      
       // 将收集到的位置转为选项格式
-      const locationMapping = {
+      const defaultLocationMapping = {
         'living': '客厅',
         'bedroom': '卧室',
         'kitchen': '厨房',
         'bathroom': '浴室',
         'study': '书房'
       };
+      
+      // 合并默认映射和自定义映射
+      const locationMapping = {...defaultLocationMapping, ...customLocationMapping};
       
       // 添加到位置选项中
       locationSet.forEach(location => {
@@ -673,10 +686,15 @@ export default {
     // 获取特定状态的设备数量
     const getDeviceCount = (status) => {
       return devices.value.filter(device => device.deviceData.status === status).length
-    }
-
-    // 获取位置标签显示名称
+    }    // 获取位置标签显示名称
     const getLocationLabel = (locationValue) => {
+      // 首先检查是否在roomOptions中存在对应的value和label
+      const foundRoom = roomOptions.find(room => room.value === locationValue);
+      if (foundRoom) {
+        return foundRoom.label;
+      }
+      
+      // 如果在roomOptions中找不到，则使用预设映射
       const locationMapping = {
         'living': '客厅',
         'bedroom': '卧室',
@@ -874,12 +892,32 @@ export default {
         ElMessage.warning('位置标识只能包含英文字母、数字和下划线')
         return
       }
+      
+      // 将新位置添加到roomOptions
       roomOptions.push({ label: newRoom.name, value: newRoom.value })
+      
+      // 保存自定义位置映射到localStorage
+      try {
+        // 获取现有映射
+        let customLocationMapping = {};
+        const savedMapping = localStorage.getItem('customLocationMapping');
+        if (savedMapping) {
+          customLocationMapping = JSON.parse(savedMapping);
+        }
+        
+        // 添加新映射
+        customLocationMapping[newRoom.value] = newRoom.name;
+        
+        // 保存回localStorage
+        localStorage.setItem('customLocationMapping', JSON.stringify(customLocationMapping));
+      } catch (error) {
+        console.error('保存自定义位置映射失败:', error);
+      }
+      
       addRoomDialogVisible.value = false
       ElMessage.success('位置添加成功')
     }
-    
-    // 内联添加位置（在添加设备对话框内）
+      // 内联添加位置（在添加设备对话框内）
     const addRoomInline = () => {
       if (!newRoomInline.name || !newRoomInline.value) {
         ElMessage.warning('请输入位置名称和标识')
@@ -902,6 +940,24 @@ export default {
         label: newRoomInline.name, 
         value: newRoomInline.value 
       })
+      
+      // 保存自定义位置映射到localStorage
+      try {
+        // 获取现有映射
+        let customLocationMapping = {};
+        const savedMapping = localStorage.getItem('customLocationMapping');
+        if (savedMapping) {
+          customLocationMapping = JSON.parse(savedMapping);
+        }
+        
+        // 添加新映射
+        customLocationMapping[newRoomInline.value] = newRoomInline.name;
+        
+        // 保存回localStorage
+        localStorage.setItem('customLocationMapping', JSON.stringify(customLocationMapping));
+      } catch (error) {
+        console.error('保存自定义位置映射失败:', error);
+      }
       
       // 设置新设备的位置为新添加的位置
       newDevice.room = newRoomInline.value
