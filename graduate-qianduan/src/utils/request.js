@@ -13,7 +13,7 @@ const service = axios.create({
 service.interceptors.request.use(
   config => {
     let token = getToken();
-    console.log('当前token:', token); // 调试用，帮助检查token是否存在
+    // console.log('当前token:', token); // 调试用，帮助检查token是否存在
     if(token){
       config.headers['token'] = token;
     }

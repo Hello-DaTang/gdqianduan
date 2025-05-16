@@ -6,80 +6,43 @@
 <script>
 import { ref, computed, onMounted, provide } from 'vue'
 import { useStore } from 'vuex'
+import { simplifyWeatherData } from '@/utils/weatherUtils'
 
 export default {
-  name: 'WeatherDataProvider',
   setup() {
-    const store = useStore()
-    const loading = ref(false)
+    const store = useStore();
+    const loading = ref(false);
     
     // 天气数据
-    const weatherData = computed(() => store.state.weather.weatherData)
+    const weatherData = computed(() => store.state.weather.weatherData);
     
-    // 获取今日天气
-    const todayWeather = computed(() => {
-      if (!weatherData.value || !weatherData.value.daily || !weatherData.value.daily.length) {
-        return null
-      }
-      return weatherData.value.daily[0]
-    })
-    
-    // 获取天气数据
+    // 获取完整天气数据
     const fetchWeather = async (forceRefresh = false) => {
       try {
-        loading.value = true
-        await store.dispatch('weather/fetchWeather', { force: forceRefresh })
-        return filterWeatherData(weatherData.value)
+        loading.value = true;
+        await store.dispatch('weather/fetchWeather', { force: forceRefresh });
+        return weatherData.value;
       } catch (error) {
-        console.error('获取天气数据失败:', error)
-        throw error
+        console.error('获取天气数据失败:', error);
+        throw error;
       } finally {
-        loading.value = false
+        loading.value = false;
       }
-    }
-      // 过滤天气数据，移除不必要的字段
-    const filterWeatherData = (weather) => {
-      if (!weather) return null
-      
-      // 检查数据类型
-      console.log('天气数据类型:', typeof weather)
-      
-      // 创建一个深拷贝
-      let filtered
+    };
+    
+    // 获取精简版天气数据（只返回12小时）
+    const fetchSimplifiedWeather = async (forceRefresh = false) => {
       try {
-        filtered = JSON.parse(JSON.stringify(weather))
+        loading.value = true;
+        await store.dispatch('weather/fetchWeather', { force: forceRefresh });
+        return simplifyWeatherData(weatherData.value);
       } catch (error) {
-        console.error('天气数据序列化失败:', error)
-        return null
+        console.error('获取精简天气数据失败:', error);
+        throw error;
+      } finally {
+        loading.value = false;
       }
-      
-      // 递归清理对象
-      const cleanObj = (obj) => {
-        if (!obj || typeof obj !== 'object') return obj
-        
-        // 如果是数组，递归处理每个元素
-        if (Array.isArray(obj)) {
-          return obj.map(item => cleanObj(item))
-        }
-        
-        // 处理对象
-        const newObj = {}
-        for (const key in obj) {
-          // 跳过returnValue等字段
-          if (key !== 'returnValue' && key !== 'return_value' && key !== 'return' && !key.includes('returnValue')) {
-            newObj[key] = cleanObj(obj[key])
-          }
-        }
-        return newObj
-      }
-      
-      try {
-        return cleanObj(filtered)
-      } catch (error) {
-        console.error('天气数据过滤失败:', error)
-        return null
-      }
-    }
+    };
     
     // 在组件挂载时预加载数据
     onMounted(async () => {
@@ -90,18 +53,18 @@ export default {
       }
     })
     
-    // 提供数据给子组件
+    // 提供数据和方法给子组件
     provide('weatherData', weatherData)
-    provide('todayWeather', todayWeather)
     provide('weatherLoading', loading)
     provide('fetchWeather', fetchWeather)
+    provide('fetchSimplifiedWeather', fetchSimplifiedWeather)
     
     return {
       weatherData,
-      todayWeather,
       loading,
-      fetchWeather
-    }
+      fetchWeather,
+      fetchSimplifiedWeather
+    };
   }
 }
 </script>

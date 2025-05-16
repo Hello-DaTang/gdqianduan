@@ -88,7 +88,7 @@ export function getChatStreamWithHistory(prompt, sessionID, contextData = null) 
         
         // 解码并处理数据
         const text = decoder.decode(value)
-        console.log('原始响应数据:', text) // 添加调试日志查看实际返回数据
+        // console.log('原始响应数据:', text) // 添加调试日志查看实际返回数据
         
         // 更灵活的数据处理逻辑，处理不同格式的返回
         const lines = text.split('\n')

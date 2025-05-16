@@ -8,6 +8,7 @@
 <script>
 import { ref, computed, onMounted, provide } from 'vue'
 import { useStore } from 'vuex'
+import { simplifyWeatherData } from '@/utils/weatherUtils'
 
 export default {
   name: 'DataProvider',
@@ -83,7 +84,8 @@ export default {
         
         // 准备过滤后的数据
         const filteredDevices = filterReturnValues(deviceList.value)
-        const filteredWeather = filterReturnValues(weatherData.value)
+        // 使用精简版天气数据
+        const filteredWeather = simplifyWeatherData(weatherData.value);
         const filteredLogs = filterReturnValues(operateLogs.value)
         
         // 构建聊天上下文数据

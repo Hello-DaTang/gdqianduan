@@ -323,9 +323,9 @@
           }
           
           // 获取天气数据
-          if (weatherProviderRef.value && weatherProviderRef.value.fetchWeather) {
+          if (weatherProviderRef.value && weatherProviderRef.value.fetchSimplifiedWeather) {
             try {
-              const weatherData = await weatherProviderRef.value.fetchWeather()
+              const weatherData = await weatherProviderRef.value.fetchSimplifiedWeather()
               if (weatherData) {
                 contextData.weather = weatherData
                 console.log('已收集天气数据')

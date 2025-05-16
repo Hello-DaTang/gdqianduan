@@ -228,7 +228,6 @@ export default {
       try {
         isLoading.value = true
         loadingMessage.value = '正在准备数据...'
-        
         let smartHomeData = null
         
         // 使用DataProvider组件获取数据
@@ -246,6 +245,7 @@ export default {
         
         // 如果使用DataProvider获取数据失败，使用原始方法
         if (!smartHomeData) {
+          console.log('使用原始方法获取数据')
           // 获取完整的设备数据
           await store.dispatch('device/fetchDevices', { force: true })
           
@@ -441,56 +441,79 @@ export default {
         isLoading.value = true
         loadingMessage.value = '正在准备数据...'
         
-        // 获取完整的设备数据
-        await store.dispatch('device/fetchDevices', { force: true })
+        let smartHomeData = null
         
-        // 获取完整的天气数据
-        await store.dispatch('weather/fetchWeather', { force: true })
-        
-        // 获取操作日志
-        await store.dispatch('operatelog/fetchOperateLogs', { force: true })
-        
-        // 过滤掉原始数据中的return value
-        const filterReturnValues = (data) => {
-          if (!data) return data
-          
-          if (Array.isArray(data)) {
-            return data.map(item => filterReturnValues(item))
+        // 使用DataProvider组件获取数据 - 保持与generateAiSuggestion函数一致
+        if (dataProviderRef.value) {
+          try {
+            smartHomeData = await dataProviderRef.value.getChatContextData(true)
+          } catch (dataError) {
+            console.error('获取数据失败:', dataError)
+            // 退回到原始方法
+            smartHomeData = null
           }
-          
-          if (typeof data === 'object' && data !== null) {
-            const result = {}
-            for (const key in data) {
-              // 排除return value相关字段
-              if (key !== 'returnValue' && 
-                  key !== 'return_value' && 
-                  key !== 'return' && 
-                  !key.includes('returnValue')) {
-                result[key] = filterReturnValues(data[key])
-              }
-            }
-            return result
-          }
-          
-          return data
         }
         
-        // 准备过滤后的数据
-        const filteredDevices = filterReturnValues(deviceList.value)
-        const filteredWeather = filterReturnValues(weatherData.value)
-        const filteredLogs = filterReturnValues(operateLogs.value)
+        // 如果使用DataProvider获取数据失败，使用原始方法
+        if (!smartHomeData) {
+          // 获取完整的设备数据
+          await store.dispatch('device/fetchDevices', { force: true })
+          
+          // 获取完整的天气数据
+          await store.dispatch('weather/fetchWeather', { force: true })
+          
+          // 获取操作日志
+          await store.dispatch('operatelog/fetchOperateLogs', { force: true })
+          
+          // 过滤掉原始数据中的return value
+          const filterReturnValues = (data) => {
+            if (!data) return data
+            
+            if (Array.isArray(data)) {
+              return data.map(item => filterReturnValues(item))
+            }
+            
+            if (typeof data === 'object' && data !== null) {
+              const result = {}
+              for (const key in data) {
+                // 排除return value相关字段
+                if (key !== 'returnValue' && 
+                    key !== 'return_value' && 
+                    key !== 'return' && 
+                    !key.includes('returnValue')) {
+                  result[key] = filterReturnValues(data[key])
+                }
+              }
+              return result
+            }
+            
+            return data
+          }
+          
+          // 准备过滤后的数据
+          const filteredDevices = filterReturnValues(deviceList.value)
+          const filteredWeather = filterReturnValues(weatherData.value)
+          const filteredLogs = filterReturnValues(operateLogs.value)
+          
+          // 构建与txt文件导出完全一致的数据
+          smartHomeData = {
+            devices: filteredDevices,
+            weather: filteredWeather,
+            operateLogs: filteredLogs
+          }
+        }
         
-        // 格式化数据为文本，完整保留所有数据（除了return value）
+        // 格式化数据为文本
         const dataText = `# 智能家居数据导出 - ${new Date().toLocaleString('zh-CN')}
         
 ## 设备数据
-${JSON.stringify(filteredDevices, null, 2)}
+${JSON.stringify(smartHomeData.devices, null, 2)}
 
 ## 天气数据
-${JSON.stringify(filteredWeather, null, 2)}
+${JSON.stringify(smartHomeData.weather, null, 2)}
 
 ## 操作历史
-${JSON.stringify(filteredLogs, null, 2)}
+${JSON.stringify(smartHomeData.operateLogs, null, 2)}
 `
         
         // 直接上传到阿里云
