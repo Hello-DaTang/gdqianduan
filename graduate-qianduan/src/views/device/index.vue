@@ -279,143 +279,13 @@
       title="设备控制" 
       width="400px"
       destroy-on-close
-    >      <div v-if="currentDevice" class="device-control">
-        <div class="device-control-header">
-          <div class="device-control-icon">
-            <img :src="getDeviceImage(currentDevice.type)" alt="设备图片" class="device-control-img" />
-          </div>
-          <h3>{{ currentDevice.homeName }}</h3>
-        </div>
-        
-        <!-- 设备位置选择 -->
-        <div class="control-section">
-          <div class="control-label">设备位置</div>
-          <el-select v-model="currentDevice.location" placeholder="请选择设备位置" style="width: 100%;">
-            <el-option
-              v-for="room in roomOptions"
-              :key="room.value"
-              :label="room.label"
-              :value="room.value"
-            >
-              <div class="room-option">
-                <i class="el-icon-office-building"></i>
-                <span>{{ room.label }}</span>
-              </div>
-            </el-option>
-          </el-select>
-        </div>
-        
-        <!-- 设备状态开关 -->
-        <div class="device-power">
-          <span>电源</span>
-          <el-switch
-            v-model="currentDevice.deviceData.status"
-            active-value="on"
-            inactive-value="off"
-            active-color="#4285F4"
-            inactive-color="#dcdfe6"
-          />
-        </div>
-        
-        <!-- 灯光控制 -->
-        <template v-if="currentDevice.type === 'light' && currentDevice.deviceData">
-          <div class="control-section">
-            <div class="control-label">亮度</div>
-            <div class="control-slider">
-              <el-slider 
-                v-model="currentDevice.deviceData.brightness" 
-                :min="0" 
-                :max="100"
-                :disabled="currentDevice.deviceData.status === 'off'"
-              />
-              <div class="slider-value">{{ currentDevice.deviceData.brightness }}%</div>
-            </div>
-          </div>
-          
-          <div class="control-section">
-            <div class="control-label">颜色</div>
-            <div class="color-picker">
-              <div 
-                v-for="color in colorOptions" 
-                :key="color.value"
-                class="color-circle"
-                :class="{ active: currentDevice.deviceData.color === color.value }"
-                :style="{ background: color.value }"
-                @click="currentDevice.deviceData.color = color.value"
-              ></div>
-            </div>
-          </div>        </template>
-        
-        <!-- 窗帘控制 -->
-        <template v-if="currentDevice.type === 'curtain' && currentDevice.deviceData">
-          <div class="control-section">
-            <div class="control-label">位置</div>
-            <div class="control-slider">
-              <el-slider 
-                v-model="currentDevice.deviceData.position" 
-                :min="0" 
-                :max="100"
-                :disabled="currentDevice.deviceData.status === 'off'"
-              />
-              <div class="slider-value">{{ currentDevice.deviceData.position }}%</div>
-            </div>
-          </div>
-        </template>
-        
-        <!-- 空调控制 -->
-        <template v-if="currentDevice.type === 'airConditioner' && currentDevice.deviceData">
-          <div class="control-section">
-            <div class="control-label">温度</div>
-            <div class="control-slider">
-              <el-slider 
-                v-model="currentDevice.deviceData.temperature" 
-                :min="16" 
-                :max="30"
-                :disabled="currentDevice.deviceData.status === 'off'"
-              />
-              <div class="slider-value">{{ currentDevice.deviceData.temperature }}°C</div>
-            </div>
-          </div>
-          
-          <div class="control-section">
-            <div class="control-label">模式</div>
-            <el-select v-model="currentDevice.deviceData.mode" style="width: 100%;">
-              <el-option label="制冷" value="cool" />
-              <el-option label="制热" value="heat" />
-              <el-option label="自动" value="auto" />
-              <el-option label="送风" value="fan" />
-            </el-select>
-          </div>
-          
-          <div class="control-section">
-            <div class="control-label">风速</div>
-            <el-select v-model="currentDevice.deviceData.fanSpeed" style="width: 100%;">
-              <el-option label="自动" value="auto" />
-              <el-option label="低速" value="low" />
-              <el-option label="中速" value="medium" />
-              <el-option label="高速" value="high" />
-            </el-select>
-          </div>
-        </template>
-        
-        <!-- 设备功率显示（所有设备都有） -->
-        <div class="control-section">
-          <div class="control-label">设备功率</div>
-          <div class="power-display">
-            <span class="power-value">{{ currentDevice.deviceData.power || 0 }} W</span>
-            <span class="power-hint">（设备固有属性）</span>
-          </div>
-        </div>
-          <!-- 定时功能（所有设备都有） -->
-        <div class="control-section">
-          <timer-control 
-            :value="currentDevice.deviceData.timer"
-            @update:value="val => currentDevice.deviceData.timer = val"
-            :device-type="currentDevice.type"
-            label="定时控制"
-          />
-        </div>
-      </div>
+    >
+      <device-control-panel 
+        v-if="currentDevice" 
+        :device="currentDevice"
+        :room-options="roomOptions"
+        ref="deviceControlRef"
+      />
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="controlDeviceDialogVisible = false">取消</el-button>
@@ -479,15 +349,16 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { detectDeviceType, getDefaultConfig } from '@/utils/deviceTypes'
 import ModernButton from '@/components/ui/ModernButton.vue'
 import ModernInput from '@/components/ui/ModernInput.vue'
-import TimerControl from '@/components/devices/TimerControl.vue'
+import { DeviceControlPanel } from '@/components/devices'
 import { addHome, deleteHome } from '@/api/device'
+
 
 export default {
   name: 'DeviceView',
   components: {
     ModernButton,
     ModernInput,
-    TimerControl
+    DeviceControlPanel
   },
   setup() {
     const store = useStore()
@@ -824,22 +695,28 @@ export default {
     // 更新设备
     const updateDevice = async () => {
       try {
-        // 使用Vuex更新设备
-        await store.dispatch('device/updateDevice', {
-          id: currentDevice.value.id,
-          homeName: currentDevice.value.homeName,
-          location: currentDevice.value.location,
-          deviceData: currentDevice.value.deviceData
-        })
-        
-        ElMessage.success('设备更新成功')
-        controlDeviceDialogVisible.value = false
+        // 从控制面板组件获取更新后的设备数据
+        if (deviceControlRef.value) {
+          const updatedDevice = deviceControlRef.value.getUpdatedDevice()
+          
+          // 使用Vuex更新设备
+          await store.dispatch('device/updateDevice', {
+            id: updatedDevice.id,
+            homeName: updatedDevice.homeName,
+            location: updatedDevice.location,
+            deviceData: updatedDevice.deviceData
+          })
+          
+          ElMessage.success('设备更新成功')
+          controlDeviceDialogVisible.value = false
+        }
       } catch (error) {
         console.error('更新设备出错:', error)
         ElMessage.error('更新设备请求失败')
       }
     }
 
+    const deviceControlRef = ref(null)
     // 删除设备
     const deleteDevice = async (id) => {
       try {
@@ -1000,13 +877,15 @@ export default {
       addDevice,
       controlDevice,
       updateDevice,
-      deleteDevice,      filterDevices,
+      deleteDevice,      
+      filterDevices,
       showAddRoomDialog,
       addRoom,
       addRoomInline,
       adding,
       getLocationLabel,
-      newRoomInline
+      newRoomInline,
+      deviceControlRef
     }
   }
 }
