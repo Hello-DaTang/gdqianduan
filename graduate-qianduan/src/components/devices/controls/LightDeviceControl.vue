@@ -78,3 +78,52 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.control-section {
+  margin-bottom: 20px;
+}
+
+.control-label {
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: #606266;
+  font-weight: 500;
+}
+
+.control-slider {
+  display: flex;
+  align-items: center;
+}
+
+.slider-value {
+  margin-left: 15px;
+  min-width: 45px;
+  text-align: center;
+}
+
+.color-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.color-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.color-circle:hover {
+  transform: scale(1.1);
+}
+
+.color-circle.active {
+  border-color: #409EFF;
+  box-shadow: 0 0 8px rgba(64, 158, 255, 0.5);
+}
+</style>

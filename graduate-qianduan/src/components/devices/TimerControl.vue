@@ -34,11 +34,24 @@
         </el-form-item>
       </div>
     </div>
+    
+    <!-- 定时任务执行时间提示 -->
+    <div v-if="timerEnabled && nextExecutionTime" class="timer-info">
+      <div class="timer-info-icon">
+        <i class="el-icon-time"></i>
+      </div>
+      <div class="timer-info-text">
+        将在 <span class="timer-time">{{ getTimeString(nextExecutionTime) }}</span> 
+        <span class="timer-day">{{ isToday(nextExecutionTime) ? '今天' : '明天' }}</span>
+        执行 <span class="timer-action">{{ getActionLabel(timerAction) }}</span>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import { ref, watch, computed, onMounted } from 'vue'
+import { ElNotification } from 'element-plus'
 
 export default {
   name: 'TimerControl',
@@ -61,6 +74,7 @@ export default {
     const timerEnabled = ref(false)
     const timerTime = ref(null)
     const timerAction = ref('on')
+    const nextExecutionTime = ref(null)
     
     // 根据设备类型生成不同的动作选项
     const actionOptions = computed(() => {
@@ -145,8 +159,7 @@ export default {
         timerAction.value = 'on'
       }
     })
-    
-    // 更新定时器
+      // 更新定时器
     const updateTimer = () => {
       if (!timerTime.value) return
       
@@ -157,14 +170,74 @@ export default {
       const timer = {
         time: timeString,
         action: timerAction.value,
-        enabled: timerEnabled.value
+        enabled: timerEnabled.value,
+        lastUpdated: new Date().toISOString() // 添加更新时间记录
+      }
+        // 计算并更新下次执行时间
+      const targetTime = updateNextExecutionTime();
+      const now = new Date();
+      
+      nextExecutionTime.value = targetTime
+        // 提示用户定时设置已保存
+      if (timerEnabled.value) {
+        ElNotification({
+          title: '定时任务已设置',
+          message: `将在 ${targetTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} ${targetTime.getDate() === now.getDate() ? '今天' : '明天'} 执行 ${getActionLabel(timerAction.value)} 操作`,
+          type: 'success',
+          duration: 5000
+        });
+      } else {
+        ElNotification({
+          title: '定时任务已关闭',
+          message: '设备将不会自动执行任何操作',
+          type: 'info',
+          duration: 3000
+        });
       }
       
       emit('update:value', timer)
       emit('change', timer)
     }
     
-    // 切换定时器启用状态
+    // 获取操作的中文标签
+    const getActionLabel = (actionValue) => {
+      const option = actionOptions.value.find(opt => opt.value === actionValue)
+      return option ? option.label : actionValue
+    }
+    
+    // 格式化时间显示
+    const getTimeString = (date) => {
+      return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    }
+    
+    // 判断是否是今天
+    const isToday = (date) => {
+      const today = new Date();
+      return date.getDate() === today.getDate() &&
+        date.getMonth() === today.getMonth() &&
+        date.getFullYear() === today.getFullYear();
+    }
+    
+    // 更新下次执行时间
+    const updateNextExecutionTime = () => {
+      if (!timerTime.value) return null;
+      
+      const hours = timerTime.value.getHours();
+      const minutes = timerTime.value.getMinutes();
+      
+      const now = new Date();
+      const targetTime = new Date();
+      targetTime.setHours(hours, minutes, 0, 0);
+      
+      // 如果目标时间已经过去，那么设置为明天的这个时间
+      if (targetTime <= now) {
+        targetTime.setDate(targetTime.getDate() + 1);
+      }
+      
+      nextExecutionTime.value = targetTime;
+      return targetTime;
+    }
+      // 切换定时器启用状态
     const toggleTimer = () => {
       if (timerEnabled.value && !timerTime.value) {
         // 如果启用但没有设置时间，设置默认时间为当前时间后1小时
@@ -174,15 +247,19 @@ export default {
       }
       
       updateTimer()
+      updateNextExecutionTime()
     }
-    
-    return {
+      return {
       timerEnabled,
       timerTime,
       timerAction,
       actionOptions,
+      nextExecutionTime,
       updateTimer,
-      toggleTimer
+      toggleTimer,
+      getTimeString,
+      isToday,
+      getActionLabel
     }
   }
 }
@@ -224,5 +301,42 @@ export default {
 .time-picker,
 .action-select {
   width: 100%;
+}
+
+.timer-info {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background-color: #fff;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  margin-top: 15px;
+}
+
+.timer-info-icon {
+  font-size: 18px;
+  color: #4285F4;
+  margin-right: 10px;
+}
+
+.timer-info-text {
+  flex: 1;
+  font-size: 14px;
+  color: #606266;
+}
+
+.timer-time {
+  font-weight: 500;
+  color: #333;
+}
+
+.timer-day {
+  font-weight: 400;
+  color: #999;
+}
+
+.timer-action {
+  font-weight: 500;
+  color: #4285F4;
 }
 </style>

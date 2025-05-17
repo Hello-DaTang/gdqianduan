@@ -27,22 +27,21 @@
     
     <!-- 设备状态开关 -->
     <div class="device-power">
-      <span>电源</span>
-      <el-switch
+      <span>电源</span>      <el-switch
         v-model="localDevice.deviceData.status"
         active-value="on"
         inactive-value="off"
         active-color="#4285F4"
         inactive-color="#dcdfe6"
+        @change="handleStatusChange"
       />
     </div>
-    
-    <!-- 动态加载特定设备控制组件 -->
+      <!-- 动态加载特定设备控制组件 -->
     <component 
       :is="getDeviceComponentName(localDevice.type)" 
       v-if="getDeviceComponentName(localDevice.type)"
       :device-data="localDevice.deviceData"
-      @update:device-data="updateDeviceData"
+      @update:deviceData="updateDeviceData"
       :disabled="localDevice.deviceData.status === 'off'"
     />
     
@@ -54,12 +53,11 @@
         <span class="power-hint">（设备固有属性）</span>
       </div>
     </div>
-    
-    <!-- 定时功能（所有设备都有） -->
+      <!-- 定时功能（所有设备都有） -->
     <div class="control-section">
       <timer-control 
         :value="localDevice.deviceData.timer"
-        @update:value="val => localDevice.deviceData.timer = val"
+        @update:value="handleTimerUpdate"
         :device-type="localDevice.type"
         label="定时控制"
       />
@@ -69,6 +67,8 @@
 
 <script>
 import { reactive, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import store from '@/store'
 import TimerControl from './TimerControl.vue'
 import LightDeviceControl from './controls/LightDeviceControl.vue'
 import CurtainDeviceControl from './controls/CurtainDeviceControl.vue'
@@ -109,9 +109,33 @@ export default {
       Object.assign(localDevice, JSON.parse(JSON.stringify(newDevice)))
     }, { deep: true })
     
-    // 添加更新设备数据的方法
+    // 更新设备数据的方法
     const updateDeviceData = (newData) => {
       localDevice.deviceData = newData
+      // 将设备数据更新同步到服务器
+      saveDeviceData()
+    }
+    
+    // 处理定时器更新
+    const handleTimerUpdate = (val) => {
+      // 更新本地设备数据
+      localDevice.deviceData.timer = val
+      // 将设备数据更新同步到服务器
+      saveDeviceData()
+    }
+    
+    // 保存设备数据到服务器
+    const saveDeviceData = async () => {
+      try {
+        // 使用 Vuex store 更新设备信息
+        await store.dispatch('device/updateDevice', {
+          id: localDevice.id,
+          deviceData: localDevice.deviceData
+        })
+      } catch (error) {
+        console.error('保存设备数据失败:', error)
+        ElMessage.error('保存设备数据失败，请重试')
+      }
     }
     
     // 获取设备图片
@@ -146,12 +170,28 @@ export default {
       return localDevice
     }
     
+    // 处理设备状态变更
+    const handleStatusChange = (value) => {
+      // 更新本地设备数据
+      localDevice.deviceData.status = value
+      // 将设备数据更新同步到服务器
+      saveDeviceData()
+      
+      ElMessage({
+        message: `设备已${value === 'on' ? '开启' : '关闭'}`,
+        type: 'success',
+        duration: 2000
+      })
+    }
+    
     return {
       localDevice,
-      getDeviceImage,
-      getDeviceComponentName,
+      getDeviceImage,      getDeviceComponentName,
       getUpdatedDevice,
-      updateDeviceData
+      updateDeviceData,
+      handleTimerUpdate,
+      handleStatusChange,
+      saveDeviceData
     }
   }
 }

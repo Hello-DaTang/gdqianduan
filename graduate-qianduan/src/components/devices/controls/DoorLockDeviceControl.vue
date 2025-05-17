@@ -22,7 +22,9 @@
     
     <!-- 安全模式 -->
     <div class="control-section">
-      <div class="control-label">安全模式</div>
+      <div class="control-header">
+        <div class="control-label">安全模式</div>
+      </div>
       <el-select 
         :model-value="deviceData.securityMode" 
         @update:model-value="updateSecurityMode"
@@ -38,7 +40,18 @@
     
     <!-- 访问记录 -->
     <div class="control-section">
-      <div class="control-label">最近访问记录</div>
+      <div class="control-header">
+        <div class="control-label">最近访问记录</div>
+        <el-button 
+          type="text" 
+          size="small" 
+          icon="el-icon-delete" 
+          @click="clearLogs" 
+          :disabled="disabled || !deviceData.accessLogs || deviceData.accessLogs.length === 0"
+        >
+          清空记录
+        </el-button>
+      </div>
       <div class="access-logs">
         <el-empty v-if="!deviceData.accessLogs || deviceData.accessLogs.length === 0" description="暂无访问记录" :image-size="50" />
         <div v-else class="log-list">
@@ -59,6 +72,8 @@
 </template>
 
 <script>
+import { onMounted } from 'vue'
+
 export default {
   name: 'DoorLockDeviceControl',
   props: {
@@ -70,8 +85,7 @@ export default {
       type: Boolean,
       default: false
     }
-  },
-  setup(props, { emit }) {
+  },  setup(props, { emit }) {
     // 切换锁状态
     const toggleLock = () => {
       // 当前时间
@@ -93,26 +107,55 @@ export default {
       
       // 只保留最近5条记录
       const recentLogs = accessLogs.slice(0, 5);
-      
-      // 更新设备数据
-      emit('update:device-data', {
+        // 更新设备数据
+      emit('update:deviceData', {
         ...props.deviceData,
         locked: !props.deviceData.locked,
         accessLogs: recentLogs
       });
     }
-    
-    // 更新安全模式
+      // 更新安全模式
     const updateSecurityMode = (value) => {
-      emit('update:device-data', {
+      emit('update:deviceData', {
         ...props.deviceData,
         securityMode: value
       });
     }
+      // 清空访问记录
+    const clearLogs = () => {
+      emit('update:deviceData', {
+        ...props.deviceData,
+        accessLogs: [],
+        lastClearedDate: new Date().toISOString().split('T')[0] // 保存最后清空的日期
+      });
+    }
+    
+    // 检查是否需要自动清空记录
+    const checkAndClearLogs = () => {
+      // 如果没有设置最后清空日期或者日期不是今天，则清空记录
+      const today = new Date().toISOString().split('T')[0];
+      if (!props.deviceData.lastClearedDate || props.deviceData.lastClearedDate !== today) {
+        // 只有当有记录时才清空
+        if (props.deviceData.accessLogs && props.deviceData.accessLogs.length > 0) {
+          clearLogs();
+        } else {          // 即使没有记录，也要更新最后清空日期
+          emit('update:deviceData', {
+            ...props.deviceData,
+            lastClearedDate: today
+          });
+        }
+      }
+    }
+    
+    // 组件挂载时检查是否需要清空记录
+    onMounted(() => {
+      checkAndClearLogs();
+    });
     
     return {
       toggleLock,
-      updateSecurityMode
+      updateSecurityMode,
+      clearLogs
     }
   }
 }
@@ -123,10 +166,16 @@ export default {
   margin-bottom: 20px;
 }
 
+.control-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
 .control-label {
   font-size: 14px;
   color: #5F6368;
-  margin-bottom: 10px;
 }
 
 .lock-control {
