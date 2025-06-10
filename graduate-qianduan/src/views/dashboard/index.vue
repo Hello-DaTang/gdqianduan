@@ -390,12 +390,11 @@ export default {
             console.warn(`找不到ID为${device.id}的设备`)
             continue
           }
-          
-          // 记录变更
+            // 记录变更
           const change = {
             id: device.id,
             name: currentDevice.homeName || currentDevice.name || `设备${device.id}`, // 优先使用homeName
-            type: currentDevice.type || 'unknown',
+            type: currentDevice.type || detectDeviceType(currentDevice.deviceData) || 'unknown',
             before: JSON.parse(JSON.stringify(currentDevice.deviceData || {})),
             after: JSON.parse(JSON.stringify(device.deviceData || {}))
           }
@@ -723,20 +722,21 @@ ${JSON.stringify(smartHomeData.operateLogs, null, 2)}
         customClass: 'device-changes-message-box'
       })
     }
-    
-    // 获取设备类型名称
+      // 获取设备类型名称
     const getDeviceTypeName = (type) => {
       const typeMap = {
         'light': '智能灯',
         'curtain': '智能窗帘',
-        'airconditioner': '智能空调',
-        'doorlock': '智能门锁',
+        'airConditioner': '智能空调',
+        'doorLock': '智能门锁',
+        'tv': '智能电视',
+        'speaker': '智能音响',
+        'custom': '自定义设备',
         'default': '智能设备'
       }
       return typeMap[type] || typeMap.default
     }
-    
-    // 获取设备类型图标
+      // 获取设备类型图标
     const getDeviceTypeIcon = (type) => {
       try {
         return require(`@/assets/images/device/${type}logo.png`)
@@ -749,19 +749,21 @@ ${JSON.stringify(smartHomeData.operateLogs, null, 2)}
           'doorLock': require('@/assets/images/device/门锁.png'),
           'tv': require('@/assets/images/device/TV@3x.png'), 
           'speaker': require('@/assets/images/device/音响.png'), 
-          'custom': require('@/assets/images/device/设备.png') 
+          'custom': require('@/assets/images/device/设备.png'),
+          'unknown': require('@/assets/images/device/设备.png')
         }
         return typeIconMap[type] || typeIconMap.light
       }
     }
-    
-    // 获取状态变化描述
+      // 获取状态变化描述
     const getStateChangesDescription = (before, after) => {
       let changes = ''
       
       if (!before || !after) {
         return '<span class="no-changes">无法比较设备状态变化</span>'
       }
+      
+      console.log('比较设备状态变化:', { before, after })
       
       // 公共状态处理
       if (before.status !== after.status) {
@@ -779,8 +781,11 @@ ${JSON.stringify(smartHomeData.operateLogs, null, 2)}
         `
       }
       
+      // 检测设备类型进行特定属性处理
+      const deviceType = detectDeviceType(before) || detectDeviceType(after)
+      
       // 根据设备类型处理不同属性
-      if (before.type === 'light' || after.type === 'light') {
+      if (deviceType === 'light') {
         // 灯光亮度
         if (before.brightness !== after.brightness) {
           changes += `
@@ -807,85 +812,95 @@ ${JSON.stringify(smartHomeData.operateLogs, null, 2)}
       }
       
       // 窗帘开度
-      if ((before.type === 'curtain' || after.type === 'curtain') && 
-          before.openPercentage !== after.openPercentage) {
-        changes += `
-          <div class="state-item">
-            <span class="state-name">开合度</span>
-            <span class="state-from">${before.openPercentage || 0}%</span>
-            <span class="state-arrow">→</span>
-            <span class="state-to">${after.openPercentage || 0}%</span>
-          </div>
-        `
+      if (deviceType === 'curtain') {
+        if (before.position !== after.position) {
+          changes += `
+            <div class="state-item">
+              <span class="state-name">开合度</span>
+              <span class="state-from">${before.position || 0}%</span>
+              <span class="state-arrow">→</span>
+              <span class="state-to">${after.position || 0}%</span>
+            </div>
+          `
+        }
       }
       
       // 空调温度
-      if ((before.type === 'airconditioner' || after.type === 'airconditioner') && 
-          before.temperature !== after.temperature) {
-        changes += `
-          <div class="state-item">
-            <span class="state-name">温度</span>
-            <span class="state-from">${before.temperature || 0}°C</span>
-            <span class="state-arrow">→</span>
-            <span class="state-to">${after.temperature || 0}°C</span>
-          </div>
-        `
-      }
-      
-      // 空调模式
-      if ((before.type === 'airconditioner' || after.type === 'airconditioner') && 
-          before.mode !== after.mode) {
-        const modeText = {
-          'cool': '制冷',
-          'heat': '制热',
-          'fan': '送风',
-          'auto': '自动',
-          'dry': '除湿'
+      if (deviceType === 'airConditioner') {
+        if (before.temperature !== after.temperature) {
+          changes += `
+            <div class="state-item">
+              <span class="state-name">温度</span>
+              <span class="state-from">${before.temperature || 0}°C</span>
+              <span class="state-arrow">→</span>
+              <span class="state-to">${after.temperature || 0}°C</span>
+            </div>
+          `
         }
-        changes += `
-          <div class="state-item">
-            <span class="state-name">模式</span>
-            <span class="state-from">${modeText[before.mode] || before.mode || '默认'}</span>
-            <span class="state-arrow">→</span>
-            <span class="state-to">${modeText[after.mode] || after.mode || '默认'}</span>
-          </div>
-        `
+        
+        // 空调模式
+        if (before.mode !== after.mode) {
+          const modeText = {
+            'cool': '制冷',
+            'heat': '制热',
+            'fan': '送风',
+            'auto': '自动',
+            'dry': '除湿'
+          }
+          changes += `
+            <div class="state-item">
+              <span class="state-name">模式</span>
+              <span class="state-from">${modeText[before.mode] || before.mode || '默认'}</span>
+              <span class="state-arrow">→</span>
+              <span class="state-to">${modeText[after.mode] || after.mode || '默认'}</span>
+            </div>
+          `
+        }
       }
       
       // 门锁状态
-      if ((before.type === 'doorlock' || after.type === 'doorlock') && 
-          before.locked !== after.locked) {
-        changes += `
-          <div class="state-item">
-            <span class="state-name">门锁状态</span>
-            <span class="state-from">${before.locked ? '已锁定' : '已解锁'}</span>
-            <span class="state-arrow">→</span>
-            <span class="state-to">${after.locked ? '已锁定' : '已解锁'}</span>
-          </div>
-        `
+      if (deviceType === 'doorLock') {
+        if (before.locked !== after.locked) {
+          changes += `
+            <div class="state-item">
+              <span class="state-name">门锁状态</span>
+              <span class="state-from">${before.locked ? '已锁定' : '已解锁'}</span>
+              <span class="state-arrow">→</span>
+              <span class="state-to">${after.locked ? '已锁定' : '已解锁'}</span>
+            </div>
+          `
+        }
       }
       
       // 处理任何其他属性变化（通用）
       const allKeys = new Set([...Object.keys(before), ...Object.keys(after)])
       allKeys.forEach(key => {
-        // 排除已处理的特定属性
-        if (['status', 'type', 'brightness', 'color', 'openPercentage', 
-             'temperature', 'mode', 'locked'].includes(key)) {
+        // 排除已处理的特定属性和系统属性
+        if (['status', 'type', 'brightness', 'color', 'position', 
+             'temperature', 'mode', 'locked', 'timer', 'power'].includes(key)) {
           return
         }
         
         // 检查属性是否发生变化
         if (JSON.stringify(before[key]) !== JSON.stringify(after[key])) {
+          const formatValue = (val) => {
+            if (typeof val === 'object') return JSON.stringify(val)
+            if (typeof val === 'boolean') return val ? '是' : '否'
+            return String(val)
+          }
+          
           changes += `
             <div class="state-item">
               <span class="state-name">${key}</span>
-              <span class="state-from">${JSON.stringify(before[key])}</span>
+              <span class="state-from">${formatValue(before[key])}</span>
               <span class="state-arrow">→</span>
-              <span class="state-to">${JSON.stringify(after[key])}</span>
+              <span class="state-to">${formatValue(after[key])}</span>
             </div>
           `
         }
       })
+      
+      console.log('生成的变化描述:', changes)
       
       return changes || '<span class="no-changes">设备状态未发生变化</span>'
     }
