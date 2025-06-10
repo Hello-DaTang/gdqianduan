@@ -49,7 +49,7 @@
                 <input type="checkbox" v-model="loginForm.remember">
                 <span>记住我</span>
               </label>
-              <a href="#" class="forgot-password">忘记密码?</a>
+              <!-- <a href="#" class="forgot-password">忘记密码?</a> -->
             </div>
             
             <button class="login-button" @click="handleLogin" :disabled="loading">

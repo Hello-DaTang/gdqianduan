@@ -1,6 +1,8 @@
 <template>
-  <!-- 这是一个逻辑组件，不渲染任何UI内容 -->
-  <slot></slot>
+  <!-- 这是一个逻辑组件，不渲染任何UI内容,包装元素来包裹<slot> -->
+  <div>
+    <slot></slot>
+  </div>
 </template>
 
 <script>
